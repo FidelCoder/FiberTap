@@ -27,7 +27,7 @@ export function createAuthMiddleware(storage: Storage) {
       return c.json({ error: "Missing x-api-key header" }, 401);
     }
 
-    const creator = storage.validateApiKey(apiKey);
+    const creator = await storage.validateApiKey(apiKey);
     if (!creator) {
       return c.json({ error: "Invalid API key" }, 401);
     }

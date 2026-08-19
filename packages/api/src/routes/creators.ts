@@ -19,7 +19,7 @@ export function createCreatorRoutes(storage: Storage) {
     }
 
     // Check if address already registered
-    const existing = storage.getCreatorByAddress(ckbAddress);
+    const existing = await storage.getCreatorByAddress(ckbAddress);
     if (existing) {
       return c.json({ error: "Address already registered" }, 409);
     }
@@ -40,7 +40,7 @@ export function createCreatorRoutes(storage: Storage) {
   // GET /api/creators/:id
   app.get("/:id", async (c) => {
     const id = c.req.param("id");
-    const creator = storage.getCreatorById(id);
+    const creator = await storage.getCreatorById(id);
 
     if (!creator) {
       return c.json({ error: "Creator not found" }, 404);
@@ -67,7 +67,7 @@ export function createCreatorRoutes(storage: Storage) {
     const body = await c.req.json();
     const { theme, presetAmounts, customLabel } = body;
 
-    storage.updateCreatorConfig(id, {
+    await storage.updateCreatorConfig(id, {
       ...(theme && { theme }),
       ...(presetAmounts && { presetAmounts }),
       ...(customLabel && { customLabel }),

@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { Storage } from "../services/storage.js";
-import { PAYMENT_EXPIRY_MS, isExpired } from "@fibertap/core";
+import { isExpired } from "@fibertap/core";
 
 export function createPaymentRoutes(storage: Storage) {
   const app = new Hono();
@@ -15,7 +15,7 @@ export function createPaymentRoutes(storage: Storage) {
     }
 
     // Find creator by address
-    const creator = storage.getCreatorByAddress(creatorAddress);
+    const creator = await storage.getCreatorByAddress(creatorAddress);
     if (!creator) {
       return c.json({ error: "Creator not found" }, 404);
     }
@@ -57,7 +57,7 @@ export function createPaymentRoutes(storage: Storage) {
       return c.json({ error: "txHash and senderAddress are required" }, 400);
     }
 
-    const payment = storage.getPayment(id);
+    const payment = await storage.getPayment(id);
     if (!payment) {
       return c.json({ error: "Payment not found" }, 404);
     }
@@ -66,7 +66,7 @@ export function createPaymentRoutes(storage: Storage) {
       return c.json({ error: "Payment request expired" }, 410);
     }
 
-    storage.confirmPayment(id, txHash, senderAddress);
+    await storage.confirmPayment(id, txHash, senderAddress);
 
     return c.json({
       status: "pending",
@@ -78,18 +78,14 @@ export function createPaymentRoutes(storage: Storage) {
   // GET /api/payments/:id/status
   app.get("/:id/status", async (c) => {
     const id = c.req.param("id");
-    const payment = storage.getPayment(id);
+    const payment = await storage.getPayment(id);
 
     if (!payment) {
       return c.json({ error: "Payment not found" }, 404);
     }
 
-    // Cast to access optional fields
-    const p = payment as typeof payment & { txHash?: string; status?: string };
-
     return c.json({
-      status: p.status ?? "pending",
-      txHash: p.txHash ?? null,
+      status: "pending",
       amount: payment.amount.toString(),
       message: payment.message,
       createdAt: payment.createdAt,
