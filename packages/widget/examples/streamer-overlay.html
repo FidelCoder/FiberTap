@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CKBStreams — Live Stream Tips</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f0f0f;
+      color: #e8e8f0;
+      min-height: 100vh;
+    }
+    .stream-layout { display: flex; height: 100vh; }
+    .video-area {
+      flex: 1; position: relative;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .video-placeholder {
+      text-align: center; opacity: 0.5;
+    }
+    .video-placeholder .play-icon {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: rgba(99,102,241,0.3); border: 2px solid rgba(99,102,241,0.5);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px; font-size: 32px;
+    }
+    .stream-title {
+      position: absolute; top: 16px; left: 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .live-badge {
+      background: #ef4444; color: white; padding: 3px 8px; border-radius: 4px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+    .viewer-count { font-size: 13px; color: #a0a0b0; }
+
+    .sidebar-panel {
+      width: 340px; background: #1a1a1a; border-left: 1px solid #2a2a2a;
+      display: flex; flex-direction: column;
+    }
+    .panel-header {
+      padding: 16px; border-bottom: 1px solid #2a2a2a;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .panel-header h3 { font-size: 15px; font-weight: 600; }
+    .panel-tabs { display: flex; gap: 4px; }
+    .panel-tab {
+      padding: 4px 12px; border-radius: 6px; background: transparent;
+      border: none; color: #888; font-size: 12px; font-weight: 500;
+      cursor: pointer; font-family: inherit;
+    }
+    .panel-tab.active { background: #2a2a2a; color: #e8e8f0; }
+
+    .tips-feed {
+      flex: 1; overflow-y: auto; padding: 16px;
+    }
+    .tip-entry {
+      display: flex; gap: 10px; padding: 10px 0;
+      border-bottom: 1px solid #222;
+      animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+    .tip-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0;
+    }
+    .tip-info { flex: 1; }
+    .tip-info .name { font-size: 13px; font-weight: 600; }
+    .tip-info .amount { color: #22c55e; font-weight: 700; }
+    .tip-info .msg { font-size: 12px; color: #888; margin-top: 2px; }
+    .tip-info .time { font-size: 11px; color: #555; }
+
+    .tip-cta {
+      padding: 16px; border-top: 1px solid #2a2a2a;
+      text-align: center;
+    }
+    .tip-cta p {
+      font-size: 13px; color: #888; margin-bottom: 8px;
+    }
+    .tip-cta .hint {
+      font-size: 11px; color: #555;
+    }
+
+    /* Simulated tips */
+    .sim-tips { padding: 0 16px 16px; border-top: 1px solid #2a2a2a; }
+    .sim-label { font-size: 11px; color: #555; text-transform: uppercase; letter-spacing: 0.5px; margin: 12px 0 8px; }
+    .sim-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+    .sim-btn {
+      padding: 6px 12px; border-radius: 6px; background: #222; border: 1px solid #333;
+      color: #ccc; font-size: 12px; cursor: pointer; font-family: inherit;
+      transition: all 0.15s;
+    }
+    .sim-btn:hover { background: #6366f1; border-color: #6366f1; color: white; }
+  </style>
+</head>
+<body>
+
+  <div class="stream-layout">
+    <!-- Video area -->
+    <div class="video-area">
+      <div class="stream-title">
+        <span class="live-badge">● LIVE</span>
+        <span class="viewer-count">247 viewers</span>
+      </div>
+      <div class="video-placeholder">
+        <div class="play-icon">▶</div>
+        <div style="font-size: 16px; font-weight: 600;">Building DeFi on CKB</div>
+        <div style="font-size: 13px; color: #666; margin-top: 4px;">Episode 14 · 2h 34m</div>
+      </div>
+    </div>
+
+    <!-- Sidebar with tips feed -->
+    <div class="sidebar-panel">
+      <div class="panel-header">
+        <h3>Stream Tips</h3>
+        <div class="panel-tabs">
+          <button class="panel-tab active">Feed</button>
+          <button class="panel-tab">Alerts</button>
+        </div>
+      </div>
+
+      <div class="tips-feed" id="tips-feed">
+        <div class="tip-entry">
+          <div class="tip-avatar">🚀</div>
+          <div class="tip-info">
+            <span class="name">nervos_fan</span> sent <span class="amount">25 CKB</span>
+            <div class="msg">Great stream! Love the CKB content</div>
+            <div class="time">2 min ago</div>
+          </div>
+        </div>
+        <div class="tip-entry">
+          <div class="tip-avatar">💎</div>
+          <div class="tip-info">
+            <span class="name">defi_builder</span> sent <span class="amount">10 CKB</span>
+            <div class="msg">Keep building!</div>
+            <div class="time">5 min ago</div>
+          </div>
+        </div>
+        <div class="tip-entry">
+          <div class="tip-avatar">⚡</div>
+          <div class="tip-info">
+            <span class="name">ckb_whale</span> sent <span class="amount">100 CKB</span>
+            <div class="msg">Fiber Network is the future</div>
+            <div class="time">8 min ago</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tip-cta">
+        <p>💜 Enjoy the stream? Send a tip!</p>
+        <div class="hint">Click the purple button → bottom right</div>
+      </div>
+
+      <div class="sim-tips">
+        <div class="sim-label">Simulate Tips</div>
+        <div class="sim-btns">
+          <button class="sim-btn" onclick="simTip('Alice', 5, 'Love it!')">5 CKB</button>
+          <button class="sim-btn" onclick="simTip('Bob', 10, 'Keep going!')">10 CKB</button>
+          <button class="sim-btn" onclick="simTip('Charlie', 25, 'Amazing work')">25 CKB</button>
+          <button class="sim-btn" onclick="simTip('Dave', 50, 'Best stream ever')">50 CKB</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       FIBERTAP WIDGET — Streamer config
+       Light theme (stands out on dark page), bottom-left to avoid sidebar
+       ═══════════════════════════════════════════════════════════════ -->
+  <script
+    src="../dist/widget.min.js"
+    data-creator="ckt1qyqvsv5240xeh85wvnau2eky8pwrhh4jr8ts8vyj3c"
+    data-theme="light"
+    data-position="bottom-left"
+    data-preset="5,10,25,50"
+    data-label="Tip"
+    data-api="http://localhost:3001"
+  ></script>
+
+  <script>
+    function simTip(name, amount, msg) {
+      const feed = document.getElementById('tips-feed');
+      const emojis = ['🚀', '💎', '⚡', '🔥', '💜', '🎯', '✨'];
+      const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+      const entry = document.createElement('div');
+      entry.className = 'tip-entry';
+      entry.innerHTML = `
+        <div class="tip-avatar">${emoji}</div>
+        <div class="tip-info">
+          <span class="name">${name}</span> sent <span class="amount">${amount} CKB</span>
+          <div class="msg">${msg}</div>
+          <div class="time">just now</div>
+        </div>
+      `;
+      feed.insertBefore(entry, feed.firstChild);
+      if (feed.children.length > 10) feed.removeChild(feed.lastChild);
+    }
+  </script>
+
+</body>
+</html>

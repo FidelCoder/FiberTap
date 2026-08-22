@@ -24,6 +24,10 @@ export type PaymentRequest = {
   message: string;
   createdAt: number;
   expiresAt: number;
+  // Set after user confirms payment, before on-chain verification
+  txHash?: string;
+  senderAddress?: string;
+  status?: "pending" | "confirmed" | "failed";
 };
 
 // Result after payment is submitted
@@ -39,9 +43,11 @@ export type PaymentResult = {
 export type WidgetOptions = {
   creator: string;
   apiEndpoint?: string;
-  preset?: string;
+  presetAmounts?: number[];
+  customLabel?: string;
   theme?: "light" | "dark" | "auto";
   position?: "bottom-right" | "bottom-left";
+  defaultMode?: "wallet" | "qr";
 };
 
 // Fiber Network client configuration

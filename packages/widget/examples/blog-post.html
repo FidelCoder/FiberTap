@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How I Built a Decentralized Tip Jar — My Blog</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #1a1a2e;
+      background: #fafafa;
+      line-height: 1.7;
+    }
+    .container { max-width: 720px; margin: 0 auto; padding: 40px 20px; }
+    header { border-bottom: 1px solid #e5e7eb; padding: 20px 0; margin-bottom: 40px; }
+    .site-name { font-weight: 700; font-size: 18px; }
+    nav { display: flex; gap: 24px; margin-top: 12px; }
+    nav a { color: #6366f1; text-decoration: none; font-size: 14px; }
+    h1 { font-size: 32px; font-weight: 800; line-height: 1.2; margin-bottom: 12px; }
+    .meta { color: #6b7280; font-size: 14px; margin-bottom: 32px; }
+    .content h2 { font-size: 22px; font-weight: 700; margin: 32px 0 12px; }
+    .content p { margin-bottom: 16px; font-size: 16px; }
+    .content code {
+      background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 14px;
+    }
+    .content pre {
+      background: #1a1a2e; color: #e8e8f0; padding: 20px; border-radius: 8px;
+      overflow-x: auto; margin-bottom: 20px; font-size: 14px; line-height: 1.5;
+    }
+    .callout {
+      background: #eef2ff; border-left: 4px solid #6366f1; padding: 16px 20px;
+      border-radius: 0 8px 8px 0; margin: 24px 0; font-size: 15px;
+    }
+    footer { border-top: 1px solid #e5e7eb; padding: 32px 0; margin-top: 48px; text-align: center; color: #9ca3af; font-size: 13px; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="site-name">My Tech Blog</div>
+      <nav>
+        <a href="#">Articles</a>
+        <a href="#">About</a>
+        <a href="#">RSS</a>
+      </nav>
+    </header>
+
+    <article>
+      <h1>How I Built a Decentralized Tip Jar for My Blog</h1>
+      <div class="meta">Published August 22, 2026 · 5 min read</div>
+
+      <div class="content">
+        <p>Imagine a world where your readers can send you money with a single click — no Stripe, no PayPal, no middleman taking 3-5%. That's what I built with FiberTap and the Nervos CKB Fiber Network.</p>
+
+        <h2>The Problem</h2>
+        <p>Every time someone wants to tip a creator online, they go through a custodial service that holds their money, charges fees, and requires accounts on both sides. Crypto micropayments were supposed to fix this, but existing solutions are either too complex or too centralized.</p>
+
+        <h2>The Solution</h2>
+        <p>FiberTap is a single <code>&lt;script&gt;</code> tag that adds a floating tip button to any website. Readers click it, pick an amount, and send CKB directly from their wallet. No accounts. No custodial wallets.</p>
+
+        <div class="callout">
+          <strong>💡 Try it!</strong> See the floating purple button in the bottom-right corner? Click it to see the tip widget in action. I'm running this on my own blog right now.
+        </div>
+
+        <h2>How It Works</h2>
+        <p>Integration is dead simple — just one line:</p>
+        <pre>&lt;script
+  src="https://cdn.fibertap.dev/widget.min.js"
+  data-creator="ckt1qyqvsv5240xeh85wvnau2eky8pwrhh4jr8ts8vyj3c"
+  data-theme="auto"
+  data-preset="1,5,10,25"
+&gt;&lt;/script&gt;</pre>
+
+        <p>The widget renders inside a Shadow DOM, so it doesn't interfere with your site's CSS at all. It supports light, dark, and auto themes, configurable preset amounts, and both wallet-based payments and QR codes.</p>
+
+        <h2>Creator Dashboard</h2>
+        <p>As a creator, you register your CKB address and get an API key. You can configure your widget's appearance, set up webhooks for payment notifications, and track all incoming tips through the API. The webhook integration means you can build anything from a Discord bot that announces tips to a full analytics dashboard.</p>
+
+        <h2>Why CKB?</h2>
+        <p>CKB (Common Knowledge Base) is the L1 blockchain of Nervos Network. It has a unique "User-Defined Token" model that makes it ideal for programmable money. The Fiber Network enables instant, zero-fee micropayments through state channels — perfect for tipping.</p>
+
+        <p>The bottom line: if you're a content creator looking for a censorship-resistant, zero-fee way to accept tips, FiberTap is the simplest way to get started.</p>
+      </div>
+    </article>
+
+    <footer>
+      © 2026 My Tech Blog · Built with FiberTap
+    </footer>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       FIBERTAP WIDGET — Add this to your site!
+       Just change data-creator to YOUR CKB address.
+       ═══════════════════════════════════════════════════════════════ -->
+  <script
+    src="../dist/widget.min.js"
+    data-creator="ckt1qyqvsv5240xeh85wvnau2eky8pwrhh4jr8ts8vyj3c"
+    data-theme="auto"
+    data-preset="1,5,10,25"
+    data-api="http://localhost:3001"
+  ></script>
+
+</body>
+</html>

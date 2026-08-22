@@ -1,0 +1,602 @@
+export const DOCS_PAGE = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FiberTap Docs — Integration Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a14; --bg2: #10101f; --bg3: #181830;
+      --border: #1e1e3a; --text: #e8e8f0; --muted: #8888a8; --dim: #555570;
+      --accent: #6366f1; --accent-light: #818cf8; --accent-dim: #3730a3;
+      --green: #22c55e; --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg); color: var(--text);
+      line-height: 1.7; overflow-x: hidden;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 14px 40px; display: flex; align-items: center; justify-content: space-between;
+      background: rgba(10,10,20,0.9); backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(30,30,58,0.4);
+    }
+    .nav-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
+    .nav-logo {
+      width: 32px; height: 32px; background: var(--accent); border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 13px; color: white;
+    }
+    .nav-name { font-size: 17px; font-weight: 700; }
+    .nav-name span { color: var(--accent-light); }
+    .nav-links { display: flex; gap: 24px; align-items: center; }
+    .nav-links a { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.2s; }
+    .nav-links a:hover, .nav-links a.active { color: var(--text); }
+    .nav-cta {
+      padding: 8px 20px; border-radius: 8px; background: var(--accent);
+      color: white !important; font-weight: 600; font-size: 13px; transition: all 0.2s;
+    }
+    .nav-cta:hover { background: var(--accent-light); }
+
+    /* ── Layout ── */
+    .layout {
+      display: grid; grid-template-columns: 220px 1fr;
+      max-width: 1100px; margin: 0 auto; padding-top: 70px;
+      min-height: 100vh;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      position: sticky; top: 70px; height: calc(100vh - 70px);
+      padding: 32px 20px 32px 24px; border-right: 1px solid var(--border);
+      overflow-y: auto;
+    }
+    .sidebar-group { margin-bottom: 24px; }
+    .sidebar-group h4 {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--dim); margin-bottom: 10px;
+    }
+    .sidebar-group a {
+      display: block; padding: 6px 10px; margin: 2px 0; border-radius: 6px;
+      color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 500;
+      transition: all 0.15s;
+    }
+    .sidebar-group a:hover { color: var(--text); background: rgba(99,102,241,0.06); }
+    .sidebar-group a.active { color: var(--accent-light); background: rgba(99,102,241,0.1); }
+
+    /* ── Content ── */
+    .content {
+      padding: 40px 48px 80px; max-width: 760px;
+    }
+    .content h1 {
+      font-size: 32px; font-weight: 800; letter-spacing: -1px;
+      margin-bottom: 8px; line-height: 1.2;
+    }
+    .content .subtitle {
+      font-size: 16px; color: var(--muted); margin-bottom: 36px; line-height: 1.6;
+    }
+    .content h2 {
+      font-size: 22px; font-weight: 700; letter-spacing: -0.5px;
+      margin: 48px 0 12px; padding-top: 16px; border-top: 1px solid var(--border);
+    }
+    .content h2:first-of-type { border-top: none; margin-top: 0; }
+    .content h3 {
+      font-size: 17px; font-weight: 700; margin: 28px 0 8px;
+    }
+    .content p { font-size: 15px; color: var(--muted); margin-bottom: 14px; }
+    .content a { color: var(--accent-light); text-decoration: none; }
+    .content a:hover { text-decoration: underline; }
+    .content ul { padding-left: 20px; margin-bottom: 14px; }
+    .content li { font-size: 15px; color: var(--muted); margin-bottom: 6px; }
+    .content li strong { color: var(--text); }
+
+    /* ── Code blocks ── */
+    pre {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: 10px;
+      padding: 16px 18px; margin: 12px 0 18px; overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace; font-size: 12.5px;
+      line-height: 1.8; color: #c4b5fd;
+    }
+    code {
+      font-family: 'JetBrains Mono', monospace; font-size: 13px;
+      background: rgba(99,102,241,0.1); padding: 2px 7px; border-radius: 5px;
+      color: var(--accent-light);
+    }
+    pre code { background: none; padding: 0; color: inherit; }
+    .tag { color: #f472b6; }
+    .attr { color: #fbbf24; }
+    .str { color: #34d399; }
+    .cmt { color: #4a4a6a; }
+    .kw { color: #c084fc; }
+    .fn { color: #67e8f9; }
+
+    /* ── Info boxes ── */
+    .info-box {
+      padding: 14px 18px; border-radius: 10px; margin: 16px 0;
+      border-left: 3px solid; font-size: 14px; line-height: 1.6;
+    }
+    .info-box.tip { background: rgba(34,197,94,0.06); border-color: var(--green); color: #86efac; }
+    .info-box.warn { background: rgba(251,191,36,0.06); border-color: #eab308; color: #fde68a; }
+    .info-box.note { background: rgba(99,102,241,0.06); border-color: var(--accent); color: var(--accent-light); }
+
+    /* ── Table ── */
+    table {
+      width: 100%; border-collapse: collapse; margin: 14px 0 20px;
+      font-size: 13px;
+    }
+    th {
+      text-align: left; padding: 10px 12px; background: var(--bg3);
+      border: 1px solid var(--border); font-weight: 600; color: var(--text);
+      font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    td {
+      padding: 10px 12px; border: 1px solid var(--border);
+      color: var(--muted); vertical-align: top;
+    }
+    td code { font-size: 12px; }
+
+    /* ── Copy button ── */
+    .code-block { position: relative; }
+    .copy-btn {
+      position: absolute; top: 10px; right: 10px;
+      padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border);
+      background: var(--bg3); color: var(--dim); font-size: 11px;
+      font-family: 'Inter', sans-serif; cursor: pointer; transition: all 0.15s;
+    }
+    .copy-btn:hover { border-color: var(--muted); color: var(--text); }
+    .copy-btn.copied { color: var(--green); border-color: var(--green); }
+
+    /* ── Platform cards ── */
+    .platform-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px; margin: 14px 0 20px;
+    }
+    .platform-card {
+      padding: 14px; border-radius: 10px; background: var(--bg2);
+      border: 1px solid var(--border); transition: all 0.2s;
+    }
+    .platform-card:hover { border-color: rgba(99,102,241,0.3); }
+    .platform-card h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .platform-card p { font-size: 12px; color: var(--dim); margin: 0; }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar {
+        position: static; height: auto; border-right: none;
+        border-bottom: 1px solid var(--border); padding: 16px;
+      }
+      .content { padding: 24px 20px 60px; }
+      nav { padding: 12px 16px; }
+      .nav-links { gap: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/" class="nav-brand">
+      <div class="nav-logo">FT</div>
+      <div class="nav-name">Fiber<span>Tap</span></div>
+    </a>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/docs" class="active">Docs</a>
+      <a href="https://github.com/FidelCoder/FiberTap" target="_blank">GitHub</a>
+    </div>
+  </nav>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-group">
+        <h4>Getting Started</h4>
+        <a href="#quickstart" class="active">Quick Start</a>
+        <a href="#installation">Installation</a>
+        <a href="#test-locally">Test Locally</a>
+      </div>
+      <div class="sidebar-group">
+        <h4>Widget</h4>
+        <a href="#configuration">Configuration</a>
+        <a href="#themes">Themes</a>
+        <a href="#position">Position</a>
+        <a href="#custom-api">Custom API</a>
+        <a href="#manual-init">Manual Init</a>
+      </div>
+      <div class="sidebar-group">
+        <h4>Platforms</h4>
+        <a href="#wordpress">WordPress</a>
+        <a href="#nextjs">Next.js</a>
+        <a href="#react">React</a>
+        <a href="#ghost">Ghost / Substack</a>
+        <a href="#hugo">Hugo</a>
+        <a href="#github-pages">GitHub Pages</a>
+        <a href="#discord">Discord Bot</a>
+      </div>
+      <div class="sidebar-group">
+        <h4>Advanced</h4>
+        <a href="#webhooks">Webhooks</a>
+        <a href="#api-ref">API Reference</a>
+        <a href="#troubleshooting">Troubleshooting</a>
+      </div>
+    </aside>
+
+    <main class="content">
+      <!-- Quick Start -->
+      <h1 id="quickstart">Quick Start</h1>
+      <p class="subtitle">Add CKB micropayments to any website in under 2 minutes. One script tag — that's the entire integration.</p>
+
+      <h2 id="installation">Installation</h2>
+      <p>Paste this single script tag before the closing <code>&lt;/body&gt;</code> on your website:</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code><span class="tag">&lt;script</span>
+  <span class="attr">src</span>=<span class="str">"https://cdn.fibertap.dev/widget.min.js"</span>
+  <span class="attr">data-creator</span>=<span class="str">"YOUR_CKB_ADDRESS_HERE"</span>
+<span class="tag">&gt;&lt;/script&gt;</span></code></pre>
+      </div>
+
+      <p>Replace <code>YOUR_CKB_ADDRESS_HERE</code> with your actual CKB wallet address:</p>
+      <ul>
+        <li><strong>Mainnet:</strong> starts with <code>ckb1q...</code></li>
+        <li><strong>Testnet:</strong> starts with <code>ckt1q...</code></li>
+      </ul>
+
+      <div class="info-box tip">
+        💡 <strong>No API key needed.</strong> Just paste the script and you're live. The widget works with any static HTML page.
+      </div>
+
+      <h2 id="test-locally">Test Locally</h2>
+      <p>Create a file called <code>test.html</code> and open it in your browser:</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code><span class="tag">&lt;!DOCTYPE html&gt;</span>
+<span class="tag">&lt;html&gt;</span>
+<span class="tag">&lt;head&gt;</span><span class="tag">&lt;title&gt;</span>My Website<span class="tag">&lt;/title&gt;</span><span class="tag">&lt;/head&gt;</span>
+<span class="tag">&lt;body&gt;</span>
+  <span class="tag">&lt;h1&gt;</span>Welcome to My Site<span class="tag">&lt;/h1&gt;</span>
+  <span class="tag">&lt;p&gt;</span>Visitors can now tip me with CKB.<span class="tag">&lt;/p&gt;</span>
+
+  <span class="tag">&lt;script</span>
+    <span class="attr">src</span>=<span class="str">"https://cdn.fibertap.dev/widget.min.js"</span>
+    <span class="attr">data-creator</span>=<span class="str">"ckt1qyqvsv5240xeh85wvnau2eky8pwrhh4jr8ts8vyj3c"</span>
+  <span class="tag">&gt;&lt;/script&gt;</span>
+<span class="tag">&lt;/body&gt;</span>
+<span class="tag">&lt;/html&gt;</span></code></pre>
+      </div>
+
+      <p>You'll see a floating tip button in the bottom-right corner. Click it to test the payment flow.</p>
+
+      <!-- Configuration -->
+      <h2 id="configuration">Configuration</h2>
+      <p>Customize the widget with <code>data-</code> attributes on the script tag:</p>
+
+      <table>
+        <thead>
+          <tr><th>Attribute</th><th>Type</th><th>Default</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>data-creator</code></td><td>string</td><td>(required)</td><td>CKB address to receive payments</td></tr>
+          <tr><td><code>data-theme</code></td><td>string</td><td><code>auto</code></td><td><code>light</code>, <code>dark</code>, or <code>auto</code></td></tr>
+          <tr><td><code>data-position</code></td><td>string</td><td><code>bottom-right</code></td><td><code>bottom-right</code> or <code>bottom-left</code></td></tr>
+          <tr><td><code>data-presets</code></td><td>string</td><td><code>1, 5, 10</code></td><td>Comma-separated preset amounts (CKB)</td></tr>
+          <tr><td><code>data-label</code></td><td>string</td><td><code>Tip</code></td><td>Button text label</td></tr>
+          <tr><td><code>data-mode</code></td><td>string</td><td>(wallet)</td><td>Set to <code>qr</code> for QR code mode</td></tr>
+          <tr><td><code>data-api</code></td><td>string</td><td><code>https://api.fibertap.dev</code></td><td>Custom API endpoint</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="themes">Themes</h2>
+      <p>The widget supports three theme modes. <code>auto</code> detects the user's system preference.</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code><span class="cmt">&lt;!-- Always dark --&gt;</span>
+<span class="tag">&lt;script</span>
+  <span class="attr">src</span>=<span class="str">"https://cdn.fibertap.dev/widget.min.js"</span>
+  <span class="attr">data-creator</span>=<span class="str">"YOUR_ADDRESS"</span>
+  <span class="attr">data-theme</span>=<span class="str">"dark"</span>
+<span class="tag">&gt;&lt;/script&gt;</span>
+
+<span class="cmt">&lt;!-- Always light --&gt;</span>
+<span class="tag">&lt;script</span>
+  <span class="attr">src</span>=<span class="str">"https://cdn.fibertap.dev/widget.min.js"</span>
+  <span class="attr">data-creator</span>=<span class="str">"YOUR_ADDRESS"</span>
+  <span class="attr">data-theme</span>=<span class="str">"light"</span>
+<span class="tag">&gt;&lt;/script&gt;</span>
+
+<span class="cmt">&lt;!-- Match system preference (default) --&gt;</span>
+<span class="tag">&lt;script</span>
+  <span class="attr">src</span>=<span class="str">"https://cdn.fibertap.dev/widget.min.js"</span>
+  <span class="attr">data-creator</span>=<span class="str">"YOUR_ADDRESS"</span>
+  <span class="attr">data-theme</span>=<span class="str">"auto"</span>
+<span class="tag">&gt;&lt;/script&gt;</span></code></pre>
+      </div>
+
+      <h2 id="position">Position</h2>
+      <p>Place the widget on either side of the screen:</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code><span class="cmt">&lt;!-- Bottom right (default) --&gt;</span>
+<span class="tag">&lt;script</span> <span class="attr">data-position</span>=<span class="str">"bottom-right"</span> <span class="attr">src</span>=<span class="str">"...widget.min.js"</span> <span class="tag">&gt;&lt;/script&gt;</span>
+
+<span class="cmt">&lt;!-- Bottom left --&gt;</span>
+<span class="tag">&lt;script</span> <span class="attr">data-position</span>=<span class="str">"bottom-left"</span> <span class="attr">src</span>=<span class="str">"...widget.min.js"</span> <span class="tag">&gt;&lt;/script&gt;</span></code></pre>
+      </div>
+
+      <h2 id="custom-api">Custom API Endpoint</h2>
+      <p>If you run your own FiberTap API server (or use the widget offline):</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code><span class="tag">&lt;script</span>
+  <span class="attr">src</span>=<span class="str">"https://cdn.fibertap.dev/widget.min.js"</span>
+  <span class="attr">data-creator</span>=<span class="str">"YOUR_ADDRESS"</span>
+  <span class="attr">data-api</span>=<span class="str">"https://your-api.example.com"</span>
+<span class="tag">&gt;&lt;/script&gt;</span></code></pre>
+      </div>
+
+      <h2 id="manual-init">Manual Initialization</h2>
+      <p>Initialize the widget programmatically instead of via a script tag:</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code><span class="tag">&lt;script</span> <span class="attr">type</span>=<span class="str">"module"</span><span class="tag">&gt;</span>
+  <span class="kw">import</span> { createWidget } <span class="kw">from</span> <span class="str">"https://cdn.fibertap.dev/widget.min.js"</span>;
+
+  <span class="fn">createWidget</span>({
+    creator: <span class="str">"YOUR_ADDRESS"</span>,
+    theme: <span class="str">"dark"</span>,
+    position: <span class="str">"bottom-left"</span>,
+    presets: [1, 5, 10, 25],
+    label: <span class="str">"Support me"</span>,
+  });
+<span class="tag">&lt;/script&gt;</span></code></pre>
+      </div>
+
+      <div class="info-box note">
+        ℹ️ <strong>Shadow DOM Isolation:</strong> The widget renders inside a Shadow DOM. Your page's CSS cannot affect the widget, and the widget's CSS cannot affect your page. This is by design.
+      </div>
+
+      <!-- Platform Guides -->
+      <h2 id="wordpress">WordPress</h2>
+      <p>Add the script to your theme's footer. Go to <strong>Appearance → Theme Editor → footer.php</strong> and paste before <code>&lt;/body&gt;</code>:</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code><span class="tag">&lt;script</span>
+  <span class="attr">src</span>=<span class="str">"https://cdn.fibertap.dev/widget.min.js"</span>
+  <span class="attr">data-creator</span>=<span class="str">"YOUR_CKB_ADDRESS"</span>
+<span class="tag">&gt;&lt;/script&gt;</span></code></pre>
+      </div>
+
+      <div class="info-box tip">
+        💡 <strong>Alternative:</strong> Install a "Code Injection" plugin and paste the snippet in the site-wide footer section. No theme editing required.
+      </div>
+
+      <h2 id="nextjs">Next.js</h2>
+      <p>In <code>pages/_document.tsx</code> or <code>app/layout.tsx</code>:</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code><span class="kw">import</span> Script <span class="kw">from</span> <span class="str">"next/script"</span>;
+
+<span class="kw">export default function</span> <span class="fn">Layout</span>({ children }) {
+  <span class="kw">return</span> (
+    <span class="tag">&lt;html&gt;</span>
+      <span class="tag">&lt;body&gt;</span>
+        {children}
+        <span class="tag">&lt;Script</span>
+          <span class="attr">src</span>=<span class="str">"https://cdn.fibertap.dev/widget.min.js"</span>
+          <span class="attr">data-creator</span>=<span class="str">"YOUR_CKB_ADDRESS"</span>
+          <span class="attr">strategy</span>=<span class="str">"lazyOnload"</span>
+        <span class="tag">/&gt;</span>
+      <span class="tag">&lt;/body&gt;</span>
+    <span class="tag">&lt;/html&gt;</span>
+  );
+}</code></pre>
+      </div>
+
+      <h2 id="react">React / Vite</h2>
+      <p>Create a component and use it anywhere in your app:</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code><span class="kw">import</span> { useEffect, useRef } <span class="kw">from</span> <span class="str">"react"</span>;
+
+<span class="kw">export function</span> <span class="fn">FiberTap</span>({ creator, theme = <span class="str">"auto"</span> }) {
+  <span class="kw">const</span> loaded = <span class="fn">useRef</span>(<span class="str">false</span>);
+
+  <span class="fn">useEffect</span>(() => {
+    <span class="kw">if</span> (loaded.current) <span class="kw">return</span>;
+    loaded.current = <span class="str">true</span>;
+
+    <span class="kw">const</span> s = document.<span class="fn">createElement</span>(<span class="str">"script"</span>);
+    s.src = <span class="str">"https://cdn.fibertap.dev/widget.min.js"</span>;
+    s.dataset.creator = creator;
+    s.dataset.theme = theme;
+    document.body.<span class="fn">appendChild</span>(s);
+  }, [creator, theme]);
+
+  <span class="kw">return null</span>;
+}
+
+<span class="cmt">// Usage: &lt;FiberTap creator="ckb1q..." theme="dark" /&gt;</span></code></pre>
+      </div>
+
+      <h2 id="ghost">Ghost / Substack</h2>
+      <p>Go to <strong>Settings → Code injection → Site Footer</strong> and paste the script tag.</p>
+
+      <h2 id="hugo">Hugo</h2>
+      <p>In <code>layouts/_default/baseof.html</code>:</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code>{{ define "scripts" }}
+  <span class="tag">&lt;script</span>
+    <span class="attr">src</span>=<span class="str">"https://cdn.fibertap.dev/widget.min.js"</span>
+    <span class="attr">data-creator</span>=<span class="str">"YOUR_CKB_ADDRESS"</span>
+  <span class="tag">&gt;&lt;/script&gt;</span>
+{{ end }}</code></pre>
+      </div>
+
+      <h2 id="github-pages">GitHub Pages</h2>
+      <p>Add the script before <code>&lt;/body&gt;</code> in your layout template or individual pages:</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code><span class="cmt">&lt;!-- In _layouts/default.html or directly in pages --&gt;</span>
+<span class="tag">&lt;script</span>
+  <span class="attr">src</span>=<span class="str">"https://cdn.fibertap.dev/widget.min.js"</span>
+  <span class="attr">data-creator</span>=<span class="str">"YOUR_CKB_ADDRESS"</span>
+<span class="tag">&gt;&lt;/script&gt;</span></code></pre>
+      </div>
+
+      <h2 id="discord">Discord Bot Integration</h2>
+      <p>Register a creator, set up webhooks, and listen for <code>payment.confirmed</code> events to verify tips in your Discord server.</p>
+
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code><span class="cmt">// 1. Register as a creator</span>
+<span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">"https://api.fibertap.dev/api/creators/register"</span>, {
+  method: <span class="str">"POST"</span>,
+  headers: { <span class="str">"Content-Type"</span>: <span class="str">"application/json"</span> },
+  body: JSON.<span class="fn">stringify</span>({
+    ckbAddress: <span class="str">"ckb1q..."</span>,
+    displayName: <span class="str">"My Discord Bot"</span>,
+  }),
+});
+
+<span class="cmt">// 2. Register webhook to receive payment events</span>
+<span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">\`https://api.fibertap.dev/api/creators/\${id}/webhooks\`</span>, {
+  method: <span class="str">"POST"</span>,
+  headers: {
+    <span class="str">"Content-Type"</span>: <span class="str">"application/json"</span>,
+    <span class="str">"x-api-key"</span>: apiKey,
+  },
+  body: JSON.<span class="fn">stringify</span>({ url: <span class="str">"https://your-server.com/webhook"</span> }),
+});</code></pre>
+      </div>
+
+      <!-- Advanced -->
+      <h2 id="webhooks">Webhooks</h2>
+      <p>Get notified when payments are confirmed. Register a webhook URL and receive POST requests with HMAC-SHA256 signatures.</p>
+
+      <h3>Event Payload</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code>{
+  <span class="str">"type"</span>: <span class="str">"payment.confirmed"</span>,
+  <span class="str">"paymentId"</span>: <span class="str">"ft_pay_xyz"</span>,
+  <span class="str">"amount"</span>: <span class="str">"100000000"</span>,
+  <span class="str">"senderAddress"</span>: <span class="str">"ckt1q..."</span>,
+  <span class="str">"txHash"</span>: <span class="str">"0xabc..."</span>,
+  <span class="str">"confirmedAt"</span>: 1700000000000,
+  <span class="str">"message"</span>: <span class="str">"Great article!"</span>
+}</code></pre>
+      </div>
+
+      <h3>Verify Signatures</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code><span class="kw">import</span> crypto <span class="kw">from</span> <span class="str">"crypto"</span>;
+
+<span class="kw">function</span> <span class="fn">verifyWebhook</span>(payload, signature, secret) {
+  <span class="kw">const</span> expected = crypto
+    .<span class="fn">createHmac</span>(<span class="str">"sha256"</span>, secret)
+    .<span class="fn">update</span>(payload)
+    .<span class="fn">digest</span>(<span class="str">"hex"</span>);
+
+  <span class="kw">return</span> crypto.<span class="fn">timingSafeEqual</span>(
+    Buffer.<span class="fn">from</span>(signature),
+    Buffer.<span class="fn">from</span>(expected)
+  );
+}</code></pre>
+      </div>
+
+      <h2 id="api-ref">API Reference</h2>
+      <p>Base URL: <code>https://api.fibertap.dev</code></p>
+
+      <h3>Endpoints</h3>
+      <table>
+        <thead>
+          <tr><th>Method</th><th>Endpoint</th><th>Auth</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>POST</code></td><td><code>/api/creators/register</code></td><td>Public</td><td>Register a new creator</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/creators/:id</code></td><td>Public</td><td>Get creator profile</td></tr>
+          <tr><td><code>PATCH</code></td><td><code>/api/creators/:id/config</code></td><td>API key</td><td>Update widget config</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/creators/:id/webhooks</code></td><td>API key</td><td>Register webhook</td></tr>
+          <tr><td><code>DELETE</code></td><td><code>/api/creators/:id/webhooks/:whId</code></td><td>API key</td><td>Delete webhook</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/payments/request</code></td><td>Public</td><td>Create payment request</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/payments/:id/confirm</code></td><td>Public</td><td>Confirm payment</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/payments/:id/status</code></td><td>Public</td><td>Check payment status</td></tr>
+          <tr><td><code>GET</code></td><td><code>/health</code></td><td>Public</td><td>Health check</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="troubleshooting">Troubleshooting</h2>
+
+      <h3>Widget doesn't appear</h3>
+      <ul>
+        <li>Check that the <code>data-creator</code> address is valid (starts with <code>ckb1q</code> or <code>ckt1q</code>)</li>
+        <li>Open browser DevTools and check the console for errors</li>
+        <li>Make sure the script URL is correct</li>
+      </ul>
+
+      <h3>Button appears but clicking does nothing</h3>
+      <ul>
+        <li>Verify your API server is running and reachable</li>
+        <li>Check the <code>data-api</code> attribute points to a valid API URL</li>
+        <li>Open DevTools Network tab to see if API calls are succeeding</li>
+      </ul>
+
+      <h3>Styling conflicts</h3>
+      <p>The widget uses Shadow DOM isolation. If you see styling issues, it's likely a z-index conflict. The widget renders at <code>z-index: 2147483647</code> (max safe value).</p>
+
+      <div class="info-box note">
+        ℹ️ <strong>Browser Support:</strong> Chrome 90+, Firefox 90+, Safari 15+, Edge 90+. The widget requires Shadow DOM support.
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    function copyCode(btn) {
+      const pre = btn.parentElement.querySelector('pre');
+      const text = pre.textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+
+    // Active sidebar link on scroll
+    const sections = document.querySelectorAll('[id]');
+    const links = document.querySelectorAll('.sidebar a');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          links.forEach(l => l.classList.remove('active'));
+          const active = document.querySelector(\`.sidebar a[href="#\${entry.target.id}"]\`);
+          if (active) active.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-20% 0px -70% 0px' });
+    sections.forEach(s => observer.observe(s));
+  </script>
+</body>
+</html>`;

@@ -45,4 +45,4 @@ pnpm build
 - Vite (widget build)
 - Hono (API server)
 - VitePress (docs)
-- SQLite (storage)
+- MongoDB (storage)

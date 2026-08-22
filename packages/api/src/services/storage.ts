@@ -2,13 +2,16 @@ import { MongoClient, type Db, type Collection } from "mongodb";
 import type { Creator, WidgetConfig, PaymentRequest, Webhook } from "@fibertap/core";
 import { generatePaymentId, PAYMENT_EXPIRY_MS } from "@fibertap/core";
 
+// A Creator record with the API key attached
+export type CreatorWithKey = Creator & { apiKey: string };
+
 // Storage interface
 export type Storage = {
   // Creators
-  createCreator(data: { ckbAddress: string; displayName: string }): Creator & { apiKey: string };
-  getCreatorById(id: string): Promise<(Creator & { apiKey: string }) | null>;
-  getCreatorByAddress(address: string): Promise<(Creator & { apiKey: string }) | null>;
-  validateApiKey(key: string): Promise<(Creator & { apiKey: string }) | null>;
+  createCreator(data: { ckbAddress: string; displayName: string }): Promise<CreatorWithKey>;
+  getCreatorById(id: string): Promise<CreatorWithKey | null>;
+  getCreatorByAddress(address: string): Promise<CreatorWithKey | null>;
+  validateApiKey(key: string): Promise<CreatorWithKey | null>;
   updateCreatorConfig(id: string, config: Partial<WidgetConfig>): Promise<void>;
 
   // Payments
@@ -16,14 +19,16 @@ export type Storage = {
     creatorId: string;
     amount: bigint;
     message: string;
-  }): PaymentRequest;
+  }): Promise<PaymentRequest>;
   getPayment(id: string): Promise<PaymentRequest | null>;
   confirmPayment(id: string, txHash: string, senderAddress: string): Promise<void>;
   updatePaymentStatus(id: string, status: "confirmed" | "failed"): Promise<void>;
+  getUnconfirmedPayments(limit?: number): Promise<PaymentRequest[]>;
 
   // Webhooks
-  addWebhook(creatorId: string, url: string, secret: string): Webhook;
+  addWebhook(creatorId: string, url: string, secret: string): Promise<Webhook>;
   getWebhooks(creatorId: string): Promise<Webhook[]>;
+  deleteWebhook(webhookId: string): Promise<boolean>;
 
   // Lifecycle
   connect(): Promise<void>;
@@ -36,14 +41,33 @@ type CreatorDoc = Omit<Creator, "widgetConfig"> & {
   widgetConfig: WidgetConfig;
 };
 
-type PaymentDoc = Omit<PaymentRequest, "amount"> & {
-  amount: string; // stored as string for MongoDB
+type PaymentDoc = {
+  id: string;
+  creatorId: string;
+  amount: string;
+  message: string;
+  createdAt: number;
+  expiresAt: number;
   txHash?: string;
   senderAddress?: string;
   status?: string;
 };
 
 type WebhookDoc = Webhook;
+
+function paymentDocToRequest(doc: PaymentDoc): PaymentRequest {
+  return {
+    id: doc.id,
+    creatorId: doc.creatorId,
+    amount: BigInt(doc.amount),
+    message: doc.message,
+    createdAt: doc.createdAt,
+    expiresAt: doc.expiresAt,
+    txHash: doc.txHash,
+    senderAddress: doc.senderAddress,
+    status: doc.status as PaymentRequest["status"],
+  };
+}
 
 // ============================================================================
 // MongoDB Storage
@@ -69,6 +93,7 @@ export function createMongoStorage(uri: string, dbName: string = "fibertap"): St
       await creators.createIndex({ ckbAddress: 1 }, { unique: true });
       await creators.createIndex({ apiKey: 1 }, { unique: true });
       await payments.createIndex({ creatorId: 1 });
+      await payments.createIndex({ status: 1 });
       await payments.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
       await webhooks.createIndex({ creatorId: 1 });
     },
@@ -114,39 +139,38 @@ export function createMongoStorage(uri: string, dbName: string = "fibertap"): St
     },
 
     async updateCreatorConfig(id, config) {
-      await creators.updateOne({ id }, { $set: { widgetConfig: config } });
+      const updateFields: Record<string, unknown> = {};
+      if (config.theme !== undefined) updateFields["widgetConfig.theme"] = config.theme;
+      if (config.position !== undefined) updateFields["widgetConfig.position"] = config.position;
+      if (config.presetAmounts !== undefined) updateFields["widgetConfig.presetAmounts"] = config.presetAmounts;
+      if (config.currency !== undefined) updateFields["widgetConfig.currency"] = config.currency;
+      if (config.customLabel !== undefined) updateFields["widgetConfig.customLabel"] = config.customLabel;
+
+      if (Object.keys(updateFields).length > 0) {
+        await creators.updateOne({ id }, { $set: updateFields });
+      }
     },
 
-    createPayment(data) {
+    async createPayment(data) {
       const now = Date.now();
-      const payment: PaymentRequest = {
+      const doc: PaymentDoc = {
         id: generatePaymentId(),
         creatorId: data.creatorId,
-        amount: data.amount,
+        amount: data.amount.toString(),
         message: data.message,
         createdAt: now,
         expiresAt: now + PAYMENT_EXPIRY_MS,
-      };
-
-      // Fire-and-forget insert (return before DB write)
-      const doc: PaymentDoc = {
-        ...payment,
-        amount: data.amount.toString(),
         status: "pending",
       };
-      payments.insertOne(doc).catch(console.error);
 
-      return payment;
+      await payments.insertOne(doc);
+      return paymentDocToRequest(doc);
     },
 
     async getPayment(id) {
       const doc = await payments.findOne({ id });
       if (!doc) return null;
-
-      return {
-        ...doc,
-        amount: BigInt(doc.amount),
-      };
+      return paymentDocToRequest(doc);
     },
 
     async confirmPayment(id, txHash, senderAddress) {
@@ -160,7 +184,15 @@ export function createMongoStorage(uri: string, dbName: string = "fibertap"): St
       await payments.updateOne({ id }, { $set: { status } });
     },
 
-    addWebhook(creatorId, url, secret) {
+    async getUnconfirmedPayments(limit = 50) {
+      const docs = await payments
+        .find({ status: "pending", txHash: { $exists: true } })
+        .limit(limit)
+        .toArray();
+      return docs.map(paymentDocToRequest);
+    },
+
+    async addWebhook(creatorId, url, secret) {
       const webhook: WebhookDoc = {
         id: generatePaymentId(),
         creatorId,
@@ -169,14 +201,17 @@ export function createMongoStorage(uri: string, dbName: string = "fibertap"): St
         createdAt: Date.now(),
       };
 
-      // Fire-and-forget insert
-      webhooks.insertOne(webhook).catch(console.error);
-
+      await webhooks.insertOne(webhook);
       return webhook;
     },
 
     async getWebhooks(creatorId) {
       return webhooks.find({ creatorId }).toArray();
+    },
+
+    async deleteWebhook(webhookId) {
+      const result = await webhooks.deleteOne({ id: webhookId });
+      return result.deletedCount > 0;
     },
   };
 }
@@ -194,7 +229,7 @@ export function createMemoryStorage(): Storage {
     async connect() {},
     async disconnect() {},
 
-    createCreator(data) {
+    async createCreator(data) {
       const id = generatePaymentId();
       const apiKey = `ft_live_${generatePaymentId()}`;
       const doc: CreatorDoc = {
@@ -240,31 +275,25 @@ export function createMemoryStorage(): Storage {
       }
     },
 
-    createPayment(data) {
+    async createPayment(data) {
       const now = Date.now();
-      const payment: PaymentRequest = {
+      const doc: PaymentDoc = {
         id: generatePaymentId(),
         creatorId: data.creatorId,
-        amount: data.amount,
+        amount: data.amount.toString(),
         message: data.message,
         createdAt: now,
         expiresAt: now + PAYMENT_EXPIRY_MS,
-      };
-
-      const doc: PaymentDoc = {
-        ...payment,
-        amount: data.amount.toString(),
         status: "pending",
       };
-      paymentStore.set(payment.id, doc);
-
-      return payment;
+      paymentStore.set(doc.id, doc);
+      return paymentDocToRequest(doc);
     },
 
     async getPayment(id) {
       const doc = paymentStore.get(id);
       if (!doc) return null;
-      return { ...doc, amount: BigInt(doc.amount) };
+      return paymentDocToRequest(doc);
     },
 
     async confirmPayment(id, txHash, senderAddress) {
@@ -283,7 +312,18 @@ export function createMemoryStorage(): Storage {
       }
     },
 
-    addWebhook(creatorId, url, secret) {
+    async getUnconfirmedPayments(limit = 50) {
+      const results: PaymentDoc[] = [];
+      for (const doc of paymentStore.values()) {
+        if (doc.status === "pending" && doc.txHash) {
+          results.push(doc);
+          if (results.length >= limit) break;
+        }
+      }
+      return results.map(paymentDocToRequest);
+    },
+
+    async addWebhook(creatorId, url, secret) {
       const webhook: WebhookDoc = {
         id: generatePaymentId(),
         creatorId,
@@ -299,6 +339,18 @@ export function createMemoryStorage(): Storage {
 
     async getWebhooks(creatorId) {
       return webhookStore.get(creatorId) ?? [];
+    },
+
+    async deleteWebhook(webhookId) {
+      for (const [key, hooks] of webhookStore.entries()) {
+        const idx = hooks.findIndex((h) => h.id === webhookId);
+        if (idx !== -1) {
+          hooks.splice(idx, 1);
+          webhookStore.set(key, hooks);
+          return true;
+        }
+      }
+      return false;
     },
   };
 }

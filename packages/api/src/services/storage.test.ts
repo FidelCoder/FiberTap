@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import { createMemoryStorage, type Storage } from "./storage.js";
 
 describe("MemoryStorage", () => {
@@ -74,7 +74,7 @@ describe("MemoryStorage", () => {
         displayName: "Payment Test",
       });
 
-      const payment = storage.createPayment({
+      const payment = await storage.createPayment({
         creatorId: creator.id,
         amount: 100000000n,
         message: "Test payment",
@@ -92,7 +92,7 @@ describe("MemoryStorage", () => {
         displayName: "Payment Test 2",
       });
 
-      const created = storage.createPayment({
+      const created = await storage.createPayment({
         creatorId: creator.id,
         amount: 500000000n,
         message: "Get test",
@@ -109,7 +109,7 @@ describe("MemoryStorage", () => {
         displayName: "Confirm Test",
       });
 
-      const payment = storage.createPayment({
+      const payment = await storage.createPayment({
         creatorId: creator.id,
         amount: 200000000n,
         message: "Confirm test",
@@ -128,7 +128,7 @@ describe("MemoryStorage", () => {
         displayName: "Webhook Test",
       });
 
-      const webhook = storage.addWebhook(creator.id, "https://example.com/hook", "secret123");
+      const webhook = await storage.addWebhook(creator.id, "https://example.com/hook", "secret123");
       expect(webhook.id).toBeDefined();
       expect(webhook.url).toBe("https://example.com/hook");
       expect(webhook.secret).toBe("secret123");
@@ -140,11 +140,30 @@ describe("MemoryStorage", () => {
         displayName: "Webhook Test 2",
       });
 
-      storage.addWebhook(creator.id, "https://example.com/hook1", "secret1");
-      storage.addWebhook(creator.id, "https://example.com/hook2", "secret2");
+      await storage.addWebhook(creator.id, "https://example.com/hook1", "secret1");
+      await storage.addWebhook(creator.id, "https://example.com/hook2", "secret2");
 
       const webhooks = await storage.getWebhooks(creator.id);
       expect(webhooks.length).toBe(2);
+    });
+
+    it("deletes a webhook", async () => {
+      const creator = await storage.createCreator({
+        ckbAddress: "ckb1qyqvsv5240xeh85wvnau2eky8pwrhh4jr8ts8vyj3c",
+        displayName: "Webhook Test 3",
+      });
+
+      const webhook = await storage.addWebhook(creator.id, "https://example.com/to-delete", "secret-del");
+      const deleted = await storage.deleteWebhook(webhook.id);
+      expect(deleted).toBe(true);
+
+      const webhooks = await storage.getWebhooks(creator.id);
+      expect(webhooks.length).toBe(0);
+    });
+
+    it("returns false when deleting nonexistent webhook", async () => {
+      const deleted = await storage.deleteWebhook("nonexistent_id");
+      expect(deleted).toBe(false);
     });
   });
 

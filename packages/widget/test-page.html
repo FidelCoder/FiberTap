@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FiberTap — Widget Playground</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --bg-card: #13131a;
+      --bg-card-hover: #1a1a24;
+      --bg-elevated: #1e1e2a;
+      --border: #2a2a3a;
+      --border-hover: #3a3a50;
+      --text: #e8e8f0;
+      --text-muted: #8888a0;
+      --text-dim: #555570;
+      --accent: #6366f1;
+      --accent-light: #818cf8;
+      --accent-dim: #3730a3;
+      --success: #22c55e;
+      --error: #ef4444;
+      --code-bg: #0d0d14;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --radius-xs: 6px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Gradient orbs background */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -200px;
+      right: -200px;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      bottom: -200px;
+      left: -100px;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(34,197,94,0.05) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Header */
+    .header {
+      padding: 32px 40px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      z-index: 1;
+    }
+    .header-left { display: flex; align-items: center; gap: 16px; }
+    .logo {
+      width: 36px; height: 36px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 18px;
+      color: white;
+    }
+    .brand { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+    .brand span { color: var(--accent-light); }
+    .badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: var(--accent-dim);
+      color: var(--accent-light);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Layout */
+    .layout {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      min-height: calc(100vh - 73px);
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      border-right: 1px solid var(--border);
+      padding: 28px 24px;
+      overflow-y: auto;
+      max-height: calc(100vh - 73px);
+    }
+    .sidebar h3 {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+    .config-group {
+      margin-bottom: 28px;
+    }
+    .config-group:last-child { margin-bottom: 0; }
+
+    .field { margin-bottom: 14px; }
+    .field:last-child { margin-bottom: 0; }
+    .field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .field input, .field select {
+      width: 100%;
+      padding: 8px 12px;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xs);
+      color: var(--text);
+      font-size: 13px;
+      font-family: 'JetBrains Mono', monospace;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .field input:focus, .field select:focus {
+      border-color: var(--accent);
+    }
+    .field select {
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      -webkit-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238888a0'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+
+    /* Toggle row */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+    }
+    .toggle-row label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 0;
+    }
+    .toggle {
+      position: relative;
+      width: 40px;
+      height: 22px;
+      cursor: pointer;
+    }
+    .toggle input { display: none; }
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: var(--border);
+      border-radius: 11px;
+      transition: background 0.2s;
+    }
+    .toggle input:checked + .toggle-track {
+      background: var(--accent);
+    }
+    .toggle-thumb {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 18px;
+      height: 18px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.2s;
+      pointer-events: none;
+    }
+    .toggle input:checked ~ .toggle-thumb {
+      transform: translateX(18px);
+    }
+
+    /* Preset chips */
+    .preset-chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .preset-chip {
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      cursor: default;
+    }
+
+    /* Main content */
+    .main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px;
+      overflow-y: auto;
+    }
+
+    /* Preview area */
+    .preview-section {
+      width: 100%;
+      max-width: 700px;
+      margin-bottom: 32px;
+    }
+    .preview-frame {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .browser-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: var(--bg-elevated);
+      border-bottom: 1px solid var(--border);
+    }
+    .browser-dots { display: flex; gap: 6px; }
+    .browser-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+    }
+    .browser-dot:nth-child(1) { background: #ef4444; }
+    .browser-dot:nth-child(2) { background: #eab308; }
+    .browser-dot:nth-child(3) { background: #22c55e; }
+    .browser-url {
+      flex: 1;
+      padding: 5px 12px;
+      background: var(--code-bg);
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+      margin-left: 8px;
+    }
+
+    .preview-content {
+      position: relative;
+      padding: 40px;
+      height: calc(100% - 42px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    /* Fake page content in preview */
+    .fake-hero {
+      text-align: center;
+    }
+    .fake-hero h2 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+    .fake-hero p {
+      font-size: 13px;
+      color: var(--text-muted);
+      max-width: 340px;
+    }
+    .fake-content {
+      display: flex;
+      gap: 12px;
+    }
+    .fake-card {
+      width: 120px;
+      height: 70px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+
+    /* Console section */
+    .console-section {
+      width: 100%;
+      max-width: 700px;
+    }
+    .console-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .console-header h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .console-clear {
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-dim);
+      font-size: 11px;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .console-clear:hover {
+      border-color: var(--border-hover);
+      color: var(--text-muted);
+    }
+    .console-log {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      max-height: 200px;
+      overflow-y: auto;
+      color: var(--text-muted);
+    }
+    .console-log:empty::before {
+      content: 'Waiting for widget interaction…';
+      color: var(--text-dim);
+      font-style: italic;
+    }
+    .log-line { display: flex; gap: 8px; padding: 1px 0; }
+    .log-time { color: var(--text-dim); flex-shrink: 0; }
+    .log-msg { word-break: break-all; }
+    .log-msg.info { color: var(--accent-light); }
+    .log-msg.warn { color: #eab308; }
+    .log-msg.error { color: #ef4444; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+
+    /* Status bar */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      flex-shrink: 0;
+    }
+    .status-dot.offline { background: var(--error); }
+
+    /* Keyboard hints */
+    .kbd {
+      display: inline-block;
+      padding: 2px 6px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    @media (max-width: 800px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        max-height: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">FT</div>
+      <div class="brand">Fiber<span>Tap</span></div>
+    </div>
+    <div class="badge">Playground</div>
+  </div>
+
+  <div class="layout">
+    <!-- Sidebar: config controls -->
+    <div class="sidebar">
+      <div class="config-group">
+        <h3>Widget Config</h3>
+
+        <div class="field">
+          <label>Creator Address</label>
+          <input id="cfg-address" type="text" value="ckt1qyqvsv5240xeh85wvnau2eky8pwrhh4jr8ts8vyj3c" spellcheck="false">
+        </div>
+
+        <div class="field">
+          <label>Theme</label>
+          <select id="cfg-theme">
+            <option value="auto" selected>Auto (system)</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Position</label>
+          <select id="cfg-position">
+            <option value="bottom-right" selected>Bottom Right</option>
+            <option value="bottom-left">Bottom Left</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Button Label</label>
+          <input id="cfg-label" type="text" value="Tip" placeholder="Tip">
+        </div>
+
+        <div class="field">
+          <label>Preset Amounts (CKB, comma-separated)</label>
+          <input id="cfg-presets" type="text" value="1, 5, 10" placeholder="1, 5, 10">
+        </div>
+
+        <div class="field">
+          <label>Default Mode</label>
+          <select id="cfg-mode">
+            <option value="" selected>Wallet (default)</option>
+            <option value="qr">QR Code</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>API Endpoint</label>
+          <input id="cfg-api" type="text" value="http://localhost:3001" placeholder="http://localhost:3001">
+        </div>
+      </div>
+
+      <div class="config-group">
+        <h3>Preview</h3>
+        <div class="status-bar">
+          <div class="status-dot" id="status-dot"></div>
+          <span id="status-text">API connected</span>
+        </div>
+      </div>
+
+      <div class="config-group">
+        <h3>Quick Actions</h3>
+        <button class="preset-chip" onclick="applyConfig()" style="cursor:pointer; background:var(--accent-dim); color:var(--accent-light); border-color:var(--accent-dim); width:100%; text-align:center; padding:8px;">
+          Apply & Reload
+        </button>
+        <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">
+          <span class="kbd" style="cursor:pointer;" onclick="document.getElementById('cfg-theme').value='dark'; applyConfig();">Dark</span>
+          <span class="kbd" style="cursor:pointer;" onclick="document.getElementById('cfg-theme').value='light'; applyConfig();">Light</span>
+          <span class="kbd" style="cursor:pointer;" onclick="document.getElementById('cfg-position').value='bottom-left'; applyConfig();">Left</span>
+          <span class="kbd" style="cursor:pointer;" onclick="document.getElementById('cfg-mode').value='qr'; applyConfig();">QR Mode</span>
+          <span class="kbd" style="cursor:pointer;" onclick="document.getElementById('cfg-presets').value='1, 5, 10'; document.getElementById('cfg-label').value='Tip'; document.getElementById('cfg-mode').value=''; applyConfig();">Reset</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main: preview + console -->
+    <div class="main">
+      <div class="preview-section">
+        <div class="preview-frame">
+          <div class="browser-bar">
+            <div class="browser-dots">
+              <div class="browser-dot"></div>
+              <div class="browser-dot"></div>
+              <div class="browser-dot"></div>
+            </div>
+            <div class="browser-url" id="browser-url">your-site.com/blog/my-post</div>
+          </div>
+          <div class="preview-content" id="preview-content">
+            <div class="fake-hero">
+              <h2>Your Awesome Blog Post</h2>
+              <p>This is a sample page to preview the FiberTap widget. Click the tip button to test the payment flow.</p>
+            </div>
+            <div class="fake-content">
+              <div class="fake-card"></div>
+              <div class="fake-card"></div>
+              <div class="fake-card"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="console-section">
+        <div class="console-header">
+          <h3>Console</h3>
+          <button class="console-clear" onclick="clearLog()">Clear</button>
+        </div>
+        <div class="console-log" id="log"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Widget script (will be placed inside preview) -->
+  <script>
+    // State
+    let config = getConfigFromURL();
+
+    function getConfigFromURL() {
+      const p = new URLSearchParams(window.location.search);
+      return {
+        address: p.get('address') || 'ckt1qyqvsv5240xeh85wvnau2eky8pwrhh4jr8ts8vyj3c',
+        theme: p.get('theme') || 'auto',
+        position: p.get('position') || 'bottom-right',
+        label: p.get('label') || 'Tip',
+        presets: p.get('presets') || '1, 5, 10',
+        api: p.get('api') || 'http://localhost:3001',
+        mode: p.get('mode') || '',
+      };
+    }
+
+    function getConfigFromInputs() {
+      return {
+        address: document.getElementById('cfg-address').value.trim(),
+        theme: document.getElementById('cfg-theme').value,
+        position: document.getElementById('cfg-position').value,
+        label: document.getElementById('cfg-label').value.trim() || 'Tip',
+        presets: document.getElementById('cfg-presets').value.trim(),
+        api: document.getElementById('cfg-api').value.trim(),
+        mode: document.getElementById('cfg-mode').value,
+      };
+    }
+
+    function applyConfig() {
+      const c = getConfigFromInputs();
+      const params = new URLSearchParams();
+      params.set('address', c.address);
+      params.set('theme', c.theme);
+      params.set('position', c.position);
+      params.set('label', c.label);
+      params.set('presets', c.presets);
+      params.set('api', c.api);
+      if (c.mode) params.set('mode', c.mode);
+      window.location.search = params.toString();
+    }
+
+    // Sync URL params → inputs
+    function syncInputsFromConfig() {
+      document.getElementById('cfg-address').value = config.address;
+      document.getElementById('cfg-theme').value = config.theme;
+      document.getElementById('cfg-position').value = config.position;
+      document.getElementById('cfg-label').value = config.label;
+      document.getElementById('cfg-presets').value = config.presets;
+      document.getElementById('cfg-mode').value = config.mode;
+      document.getElementById('cfg-api').value = config.api;
+    }
+
+    // Preview URL display
+    function updatePreviewURL() {
+      const url = document.getElementById('browser-url');
+      url.textContent = `your-site.com/blog/my-post`;
+    }
+
+    // Console logging
+    const logEl = document.getElementById('log');
+    const origLog = console.log;
+    const origWarn = console.warn;
+    const origError = console.error;
+
+    function timestamp() {
+      return new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    function appendLog(type, args) {
+      const cls = type === 'error' ? 'error' : type === 'warn' ? 'warn' : 'info';
+      const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+      const line = document.createElement('div');
+      line.className = 'log-line';
+      line.innerHTML = `<span class="log-time">${timestamp()}</span><span class="log-msg ${cls}">${msg}</span>`;
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    console.log = (...args) => { origLog(...args); appendLog('log', args); };
+    console.warn = (...args) => { origWarn(...args); appendLog('warn', args); };
+    console.error = (...args) => { origError(...args); appendLog('error', args); };
+
+    function clearLog() {
+      logEl.innerHTML = '';
+    }
+
+    // Check API status
+    async function checkAPI() {
+      try {
+        const r = await fetch(config.api + '/health');
+        if (r.ok) {
+          document.getElementById('status-dot').classList.remove('offline');
+          document.getElementById('status-text').textContent = 'API connected';
+        } else throw 'bad';
+      } catch {
+        document.getElementById('status-dot').classList.add('offline');
+        document.getElementById('status-text').textContent = 'API offline — run pnpm dev';
+      }
+    }
+
+    // Inject widget into preview
+    function loadWidget() {
+      // Remove existing widget script + shadow DOM
+      const existing = document.getElementById('fibertap-widget');
+      if (existing) existing.remove();
+      // Also remove any existing shadow DOMs that might be lingering
+      document.querySelectorAll('[data-fibertap-shadow]').forEach(el => el.remove());
+
+      const preview = document.getElementById('preview-content');
+
+      const script = document.createElement('script');
+      script.id = 'fibertap-widget';
+      script.src = '../dist/widget.min.js';
+      script.dataset.creator = config.address;
+      script.dataset.theme = config.theme;
+      script.dataset.position = config.position;
+      script.dataset.label = config.label;
+      script.dataset.presets = config.presets;
+      script.dataset.api = config.api;
+      if (config.mode) script.dataset.mode = config.mode;
+      script.defer = true;
+
+      // Append to preview so the fixed-position widget appears inside the frame
+      preview.appendChild(script);
+    }
+
+    // Init
+    syncInputsFromConfig();
+    updatePreviewURL();
+    checkAPI();
+    loadWidget();
+
+    // Re-check API every 10s
+    setInterval(checkAPI, 10000);
+  </script>
+</body>
+</html>

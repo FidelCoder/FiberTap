@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import type { PaymentEvent, Webhook } from "@fibertap/core";
 
 // Deliver webhook event to a URL
@@ -45,28 +46,26 @@ export async function deliverWebhook(
   return { success: false, error: "Max retries exceeded" };
 }
 
-// HMAC-SHA256 signature
+// HMAC-SHA256 signature using Node.js crypto
 function hmacSHA256(secret: string, payload: string): string {
-  // Use Node.js crypto in production, Web Crypto API as fallback
-  if (typeof globalThis.crypto !== "undefined" && globalThis.crypto.subtle) {
-    // This is async but we need sync for the header - use a simpler approach
-    return simpleHmac(secret, payload);
-  }
-  return simpleHmac(secret, payload);
+  return crypto.createHmac("sha256", secret).update(payload).digest("hex");
 }
 
-// Simple HMAC implementation for environments without subtle crypto
-function simpleHmac(secret: string, payload: string): string {
-  // In production, use proper HMAC-SHA256
-  // This is a placeholder that should be replaced with crypto.createHmac
-  const data = `${secret}:${payload}`;
-  let hash = 0;
-  for (let i = 0; i < data.length; i++) {
-    const char = data.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash;
+// Verify an HMAC-SHA256 signature (for use by webhook consumers)
+export function verifyHmacSignature(
+  secret: string,
+  payload: string,
+  signature: string
+): boolean {
+  const expected = hmacSHA256(secret, payload);
+  // Constant-time comparison to prevent timing attacks
+  const sigBuf = Buffer.from(signature, "hex");
+  const expectedBuf = Buffer.from(expected, "hex");
+  // timingSafeEqual requires same length — return false early if not
+  if (sigBuf.length !== expectedBuf.length) {
+    return false;
   }
-  return `hmac_${Math.abs(hash).toString(16).padStart(8, "0")}`;
+  return crypto.timingSafeEqual(sigBuf, expectedBuf);
 }
 
 function sleep(ms: number): Promise<void> {

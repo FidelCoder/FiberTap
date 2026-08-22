@@ -1,14 +1,12 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { serve, type ServerType } from "@hono/node-server";
 import { loadConfig } from "./config.js";
 import { createMongoStorage, createMemoryStorage, type Storage } from "./services/storage.js";
 import { createAuthMiddleware } from "./middleware/auth.js";
 import { rateLimitMiddleware } from "./middleware/rateLimit.js";
 import { createCreatorRoutes } from "./routes/creators.js";
 import { createPaymentRoutes } from "./routes/payments.js";
-import { startPaymentVerifier } from "./services/paymentVerifier.js";
 import { LANDING_PAGE } from "./landing.js";
 import { DOCS_PAGE } from "./docs.js";
 import { readFileSync, existsSync } from "fs";
@@ -19,8 +17,6 @@ import type { Context, Next } from "hono";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const config = loadConfig();
-
-// Use MongoDB in production, in-memory for development
 const useMongo = (process.env.NODE_ENV === "production" || process.env.USE_MONGO === "true") && !!process.env.MONGODB_URI;
 const storage: Storage = useMongo
   ? createMongoStorage(config.mongoUri, config.mongoDb)
@@ -40,15 +36,6 @@ app.use(
   })
 );
 
-// Request body size limit (100KB)
-app.use("/api/*", async (c: Context, next: Next) => {
-  const contentLength = c.req.header("content-length");
-  if (contentLength && parseInt(contentLength) > 100_000) {
-    return c.json({ error: "Request body too large" }, 413);
-  }
-  return next();
-});
-
 app.use("/api/*", rateLimitMiddleware);
 app.use("/api/*", createAuthMiddleware(storage));
 
@@ -67,11 +54,9 @@ app.get("/health", (c) =>
 );
 
 // Landing page
-app.get("/", (c) => {
-  return c.html(LANDING_PAGE);
-});
+app.get("/", (c) => c.html(LANDING_PAGE));
 
-// Try to load widget JS at startup for CDN serving
+// Serve widget JS
 let widgetJs = "";
 const widgetPaths = [
   resolve(__dirname, "../public/widget.min.js"),
@@ -81,12 +66,10 @@ const widgetPaths = [
 for (const p of widgetPaths) {
   if (existsSync(p)) {
     widgetJs = readFileSync(p, "utf-8");
-    console.log(`Loaded widget JS from ${p}`);
     break;
   }
 }
 
-// Serve widget JS from CDN path
 app.get("/widget.min.js", (c) => {
   if (!widgetJs) {
     return c.json({ error: "Widget not built" }, 404);
@@ -104,78 +87,7 @@ app.get("/widget.min.js", (c) => {
 app.get("/docs", (c) => c.html(DOCS_PAGE));
 app.get("/docs/*", (c) => c.html(DOCS_PAGE));
 
-// 404 for unmatched routes
 app.notFound((c) => c.json({ error: "Not found" }, 404));
 
-// Start server
-let server: ServerType | null = null;
-let paymentVerifierAbort: AbortController | null = null;
-
-async function start() {
-  if (useMongo) {
-    await storage.connect();
-    console.log(`Connected to MongoDB: ${config.mongoDb}`);
-  }
-
-  // Start background payment verification
-  paymentVerifierAbort = startPaymentVerifier(storage, config);
-
-  server = serve(
-    {
-      fetch: app.fetch.bind(app),
-      port: config.port,
-    },
-    (info) => {
-      console.log(`FiberTap API running on http://localhost:${info.port}`);
-      console.log(`Network: ${config.network}`);
-      console.log(`Storage: ${useMongo ? "mongodb" : "memory"}`);
-    }
-  );
-
-  // Keep the process alive
-  server.on("error", (err) => {
-    console.error("Server error:", err);
-  });
-}
-
-// Graceful shutdown
-async function shutdown(signal: string) {
-  console.log(`\nReceived ${signal}. Shutting down gracefully...`);
-
-  // Stop accepting new connections
-  if (server) {
-    server.close();
-  }
-
-  // Stop payment verifier
-  if (paymentVerifierAbort) {
-    paymentVerifierAbort.abort();
-  }
-
-  // Close storage connections
-  if (useMongo) {
-    await storage.disconnect();
-    console.log("MongoDB connection closed.");
-  }
-
-  console.log("Server shut down cleanly.");
-  process.exit(0);
-}
-
-process.on("SIGTERM", () => shutdown("SIGTERM"));
-process.on("SIGINT", () => shutdown("SIGINT"));
-
-process.on("uncaughtException", (err) => {
-  console.error("Uncaught exception:", err);
-});
-
-process.on("unhandledRejection", (err) => {
-  console.error("Unhandled rejection:", err);
-});
-
-start().catch((err) => {
-  console.error("Failed to start server:", err);
-  process.exit(1);
-});
-
+// Vercel serverless handler
 export default app;

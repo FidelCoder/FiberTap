@@ -1,6 +1,63 @@
 import type { WidgetOptions } from "@fibertap/core";
-import { truncateHash, formatError } from "@fibertap/core";
+import { truncateHash, formatError, ckbToShannons } from "@fibertap/core";
 import { showStatus } from "./ui.js";
+
+// CKB wallet provider interface (JoyID, RetroWallet, etc.)
+interface CKBWalletProvider {
+  request: (params: { method: string; params?: unknown[] }) => Promise<unknown>;
+}
+
+declare global {
+  interface Window {
+    ckb?: CKBWalletProvider;
+    kickwallet?: CKBWalletProvider;
+    indoors?: CKBWalletProvider;
+    ethereum?: CKBWalletProvider;
+  }
+}
+
+// Detect available CKB wallet
+function detectWallet(): CKBWalletProvider | null {
+  // Priority order: JoyID -> kickwallet -> indoors -> ethereum (for CCC compatibility)
+  if (typeof window !== "undefined") {
+    if (window.ckb) return window.ckb;
+    if (window.kickwallet) return window.kickwallet;
+    if (window.indoors) return window.indoors;
+    // Ethereum as fallback for CCC-compatible wallets
+    if (window.ethereum) return window.ethereum;
+  }
+  return null;
+}
+
+// Connect to CKB wallet and get sender address
+async function connectWallet(): Promise<string> {
+  const wallet = detectWallet();
+  if (!wallet) {
+    throw new Error(
+      "No CKB wallet found. Install JoyID or a compatible wallet."
+    );
+  }
+
+  try {
+    // Try JoyID/kickwallet style first
+    const accounts = await wallet.request({ method: "eth_accounts" });
+    if (Array.isArray(accounts) && accounts.length > 0) {
+      return accounts[0] as string;
+    }
+
+    // Try requesting accounts if none returned
+    const requested = await wallet.request({ method: "eth_requestAccounts" });
+    if (Array.isArray(requested) && requested.length > 0) {
+      return requested[0] as string;
+    }
+  } catch (err) {
+    throw new Error(
+      `Wallet connection failed: ${err instanceof Error ? err.message : "Unknown error"}`
+    );
+  }
+
+  throw new Error("Wallet returned no accounts.");
+}
 
 // Handle the payment flow
 export async function handlePayment(
@@ -12,57 +69,31 @@ export async function handlePayment(
 ): Promise<void> {
   // Disable button, show loading
   payBtn.disabled = true;
-  showStatus(statusEl, "loading", "Preparing payment...");
+  showStatus(statusEl, "loading", "Connecting…");
 
   try {
-    // Request wallet connection
+    // 1. Request wallet connection
     const senderAddress = await connectWallet();
-    showStatus(statusEl, "loading", "Confirm in your wallet...");
+    showStatus(statusEl, "loading", "Confirm in wallet…");
 
-    // Create payment request via API
+    // 2. Create payment request via API
     const paymentId = await createPaymentRequest(options, amount, message, senderAddress);
 
-    // Request wallet signature
+    // 3. Request wallet signature and broadcast
     const txHash = await requestWalletSignature(senderAddress, options.creator, amount);
 
-    // Confirm payment with API
-    showStatus(statusEl, "loading", "Broadcasting...");
+    // 4. Confirm payment with API
+    showStatus(statusEl, "loading", "Verifying…");
     await confirmPayment(options, paymentId, txHash, senderAddress);
 
-    // Show success
-    showStatus(statusEl, "success", `Sent! Tx: ${truncateHash(txHash)}`);
+    // 5. Show success
+    showStatus(statusEl, "success", `Sent · ${truncateHash(txHash)}`);
   } catch (error) {
-    showStatus(statusEl, "error", formatError(error));
+    const errorMessage = formatError(error);
+    showStatus(statusEl, "error", errorMessage);
   } finally {
     payBtn.disabled = false;
   }
-}
-
-// Connect to CKB wallet
-async function connectWallet(): Promise<string> {
-  // Check for JoyID or CCC-compatible wallet
-  if (typeof window !== "undefined" && "ckb" in window) {
-    const ckb = (window as Record<string, unknown>).ckb as {
-      request: (params: { method: string }) => Promise<string[]>;
-    };
-    const accounts = await ckb.request({ method: "eth_accounts" });
-    if (accounts && accounts.length > 0) {
-      return accounts[0];
-    }
-  }
-
-  // Check for injected wallet (Ethereum-style)
-  if (typeof window !== "undefined" && "ethereum" in window) {
-    const ethereum = (window as Record<string, unknown>).ethereum as {
-      request: (params: { method: string }) => Promise<string[]>;
-    };
-    const accounts = await ethereum.request({ method: "eth_requestAccounts" });
-    if (accounts && accounts.length > 0) {
-      return accounts[0];
-    }
-  }
-
-  throw new Error("No CKB wallet found. Please install JoyID or a compatible wallet.");
 }
 
 // Create payment request via API
@@ -79,57 +110,72 @@ async function createPaymentRequest(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       creatorAddress: options.creator,
-      amount: Math.round(amount * 100_000_000).toString(), // Convert to shannons
+      amount: ckbToShannons(amount).toString(),
       message,
       senderAddress,
     }),
   });
 
   if (!response.ok) {
-    throw new Error("Failed to create payment request");
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(
+      (errorBody as { error?: string }).error ?? `Payment request failed (${response.status})`
+    );
   }
 
   const data = (await response.json()) as { paymentId: string };
   return data.paymentId;
 }
 
-// Request wallet signature for the transaction
+// Request wallet signature for the CKB transaction
 async function requestWalletSignature(
   sender: string,
   recipient: string,
   amount: number
 ): Promise<string> {
-  // Build the transaction payload
+  const wallet = detectWallet();
+  if (!wallet) {
+    throw new Error("No wallet available to sign transaction");
+  }
+
+  // Build the CKB transaction payload
+  // This uses a simplified format that CKB wallets understand
   const txPayload = {
     from: sender,
     to: recipient,
-    amount: Math.round(amount * 100_000_000).toString(),
+    amount: ckbToShannons(amount).toString(),
+    network: recipient.startsWith("ckt") ? "testnet" : "mainnet",
   };
 
-  // Request signature from wallet
-  if (typeof window !== "undefined" && "ckb" in window) {
-    const ckb = (window as Record<string, unknown>).ckb as {
-      request: (params: { method: string; params: unknown[] }) => Promise<string>;
-    };
-    const txHash = await ckb.request({
+  try {
+    // Try sending transaction via wallet
+    // JoyID and CCC-compatible wallets support eth_sendTransaction
+    // with a CKB-specific payload format
+    const result = await wallet.request({
       method: "eth_sendTransaction",
       params: [txPayload],
     });
-    return txHash;
-  }
 
-  if (typeof window !== "undefined" && "ethereum" in window) {
-    const ethereum = (window as Record<string, unknown>).ethereum as {
-      request: (params: { method: string; params: unknown[] }) => Promise<string>;
-    };
-    const txHash = await ethereum.request({
-      method: "eth_sendTransaction",
-      params: [txPayload],
-    });
-    return txHash;
-  }
+    if (typeof result === "string") {
+      return result;
+    }
 
-  throw new Error("No wallet available to sign transaction");
+    // Some wallets return an object with txHash
+    if (typeof result === "object" && result !== null && "txHash" in result) {
+      return (result as { txHash: string }).txHash;
+    }
+
+    throw new Error("Wallet returned unexpected response");
+  } catch (err) {
+    // Re-throw user rejection errors as-is
+    if (err instanceof Error) {
+      if (err.message.includes("reject") || err.message.includes("denied")) {
+        throw new Error("Transaction rejected");
+      }
+      throw err;
+    }
+    throw new Error("Failed to sign transaction");
+  }
 }
 
 // Confirm payment with API after broadcast
@@ -148,6 +194,9 @@ async function confirmPayment(
   });
 
   if (!response.ok) {
-    throw new Error("Failed to confirm payment");
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(
+      (errorBody as { error?: string }).error ?? `Payment confirmation failed (${response.status})`
+    );
   }
 }

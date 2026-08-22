@@ -1,24 +1,48 @@
 import type { Context, Next } from "hono";
-import type { Storage } from "../services/storage.js";
+import type { Storage, CreatorWithKey } from "../services/storage.js";
+
+// Hono environment with typed variables
+type AuthEnv = {
+  Variables: {
+    creator: CreatorWithKey;
+  };
+};
 
 // Public endpoints that don't require authentication
-const PUBLIC_ENDPOINTS = [
+// Note: These are checked with startsWith, so order matters
+const PUBLIC_PREFIXES = [
   "/api/payments/request",
   "/api/payments/",
+  "/api/creators/register",
+  "/api/creators/",
   "/health",
 ];
 
-function isPublicEndpoint(path: string): boolean {
-  return PUBLIC_ENDPOINTS.some((endpoint) => path.startsWith(endpoint));
+function isPublicEndpoint(path: string, method: string): boolean {
+  // All methods on payment request and register are public
+  if (PUBLIC_PREFIXES.some((prefix) => path.startsWith(prefix))) {
+    // But non-GET on creators/:id/config and creators/:id/webhooks need auth
+    if (
+      method !== "GET" &&
+      path.startsWith("/api/creators/") &&
+      !path.endsWith("/register") &&
+      (path.endsWith("/config") || path.includes("/webhooks"))
+    ) {
+      return false;
+    }
+    return true;
+  }
+  return false;
 }
 
 // Create auth middleware with storage dependency
 export function createAuthMiddleware(storage: Storage) {
-  return async (c: Context, next: Next) => {
+  return async (c: Context<AuthEnv>, next: Next) => {
     const path = c.req.path;
+    const method = c.req.method;
 
     // Public endpoints - no auth needed
-    if (isPublicEndpoint(path)) {
+    if (isPublicEndpoint(path, method)) {
       return next();
     }
 

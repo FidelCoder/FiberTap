@@ -7,12 +7,25 @@ export function createPaymentRoutes(storage: Storage) {
 
   // POST /api/payments/request
   app.post("/request", async (c) => {
-    const body = await c.req.json();
-    const { creatorAddress, amount, message, senderAddress } = body;
+    let body: Record<string, unknown>;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Invalid JSON body" }, 400);
+    }
+    const { creatorAddress, amount, message, senderAddress } = body as {
+      creatorAddress?: string;
+      amount?: string | number;
+      message?: string;
+      senderAddress?: string;
+    };
 
     if (!creatorAddress || !amount) {
       return c.json({ error: "creatorAddress and amount are required" }, 400);
     }
+
+    // Sanitize message input
+    const sanitizedMessage = sanitizeInput(message ?? "");
 
     // Find creator by address
     const creator = await storage.getCreatorByAddress(creatorAddress);
@@ -32,10 +45,10 @@ export function createPaymentRoutes(storage: Storage) {
       return c.json({ error: "Amount must be positive" }, 400);
     }
 
-    const payment = storage.createPayment({
+    const payment = await storage.createPayment({
       creatorId: creator.id,
       amount: amountBigInt,
-      message: message ?? "",
+      message: sanitizedMessage,
     });
 
     return c.json(
@@ -50,11 +63,21 @@ export function createPaymentRoutes(storage: Storage) {
   // POST /api/payments/:id/confirm
   app.post("/:id/confirm", async (c) => {
     const id = c.req.param("id");
-    const body = await c.req.json();
-    const { txHash, senderAddress } = body;
+    let body: Record<string, unknown>;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Invalid JSON body" }, 400);
+    }
+    const { txHash, senderAddress } = body as { txHash?: string; senderAddress?: string };
 
     if (!txHash || !senderAddress) {
       return c.json({ error: "txHash and senderAddress are required" }, 400);
+    }
+
+    // Basic txHash format validation
+    if (!/^0x[0-9a-f]+$/i.test(txHash)) {
+      return c.json({ error: "Invalid txHash format" }, 400);
     }
 
     const payment = await storage.getPayment(id);
@@ -67,6 +90,9 @@ export function createPaymentRoutes(storage: Storage) {
     }
 
     await storage.confirmPayment(id, txHash, senderAddress);
+
+    // Webhooks are delivered by the background payment verifier
+    // when on-chain confirmation is verified — not here.
 
     return c.json({
       status: "pending",
@@ -85,7 +111,7 @@ export function createPaymentRoutes(storage: Storage) {
     }
 
     return c.json({
-      status: "pending",
+      status: payment.status ?? "pending",
       amount: payment.amount.toString(),
       message: payment.message,
       createdAt: payment.createdAt,
@@ -94,4 +120,14 @@ export function createPaymentRoutes(storage: Storage) {
   });
 
   return app;
+}
+
+// Sanitize user input to prevent XSS and injection
+function sanitizeInput(input: string): string {
+  return input
+    .replace(/[<>]/g, "") // Remove angle brackets
+    .replace(/javascript:/gi, "") // Remove javascript: protocol
+    .replace(/on\w+\s*=/gi, "") // Remove event handlers
+    .trim()
+    .slice(0, 200); // Enforce max length
 }

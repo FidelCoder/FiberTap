@@ -1,13 +1,27 @@
 import { Hono } from "hono";
-import type { Storage } from "../services/storage.js";
+import crypto from "crypto";
+import type { WidgetConfig } from "@fibertap/core";
+import type { Storage, CreatorWithKey } from "../services/storage.js";
+
+// Hono environment with typed variables
+type CreatorEnv = {
+  Variables: {
+    creator: CreatorWithKey;
+  };
+};
 
 export function createCreatorRoutes(storage: Storage) {
-  const app = new Hono();
+  const app = new Hono<CreatorEnv>();
 
   // POST /api/creators/register
   app.post("/register", async (c) => {
-    const body = await c.req.json();
-    const { ckbAddress, displayName } = body;
+    let body: Record<string, unknown>;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Invalid JSON body" }, 400);
+    }
+    const { ckbAddress, displayName } = body as { ckbAddress?: string; displayName?: string };
 
     if (!ckbAddress || !displayName) {
       return c.json({ error: "ckbAddress and displayName are required" }, 400);
@@ -18,13 +32,18 @@ export function createCreatorRoutes(storage: Storage) {
       return c.json({ error: "Invalid CKB address format" }, 400);
     }
 
+    // Validate displayName length
+    if (displayName.length < 1 || displayName.length > 100) {
+      return c.json({ error: "displayName must be between 1 and 100 characters" }, 400);
+    }
+
     // Check if address already registered
     const existing = await storage.getCreatorByAddress(ckbAddress);
     if (existing) {
       return c.json({ error: "Address already registered" }, 409);
     }
 
-    const creator = storage.createCreator({ ckbAddress, displayName });
+    const creator = await storage.createCreator({ ckbAddress, displayName });
 
     return c.json(
       {
@@ -51,6 +70,7 @@ export function createCreatorRoutes(storage: Storage) {
       displayName: creator.displayName,
       ckbAddress: creator.ckbAddress,
       createdAt: creator.createdAt,
+      widgetConfig: creator.widgetConfig,
     });
   });
 
@@ -64,14 +84,29 @@ export function createCreatorRoutes(storage: Storage) {
       return c.json({ error: "Unauthorized" }, 403);
     }
 
-    const body = await c.req.json();
-    const { theme, presetAmounts, customLabel } = body;
+    let body: Record<string, unknown>;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Invalid JSON body" }, 400);
+    }
 
-    await storage.updateCreatorConfig(id, {
-      ...(theme && { theme }),
-      ...(presetAmounts && { presetAmounts }),
-      ...(customLabel && { customLabel }),
-    });
+    const { theme, presetAmounts, customLabel } = body as {
+      theme?: string;
+      presetAmounts?: number[];
+      customLabel?: string;
+    };
+
+    const configUpdate: Partial<WidgetConfig> = {};
+    if (theme) configUpdate.theme = theme as WidgetConfig["theme"];
+    if (presetAmounts && Array.isArray(presetAmounts)) configUpdate.presetAmounts = presetAmounts;
+    if (customLabel) configUpdate.customLabel = customLabel;
+
+    if (Object.keys(configUpdate).length === 0) {
+      return c.json({ error: "No valid fields to update" }, 400);
+    }
+
+    await storage.updateCreatorConfig(id, configUpdate);
 
     return c.json({ success: true });
   });
@@ -85,11 +120,16 @@ export function createCreatorRoutes(storage: Storage) {
       return c.json({ error: "Unauthorized" }, 403);
     }
 
-    const body = await c.req.json();
-    const { url, secret } = body;
+    let body: Record<string, unknown>;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Invalid JSON body" }, 400);
+    }
+    const { url } = body as { url?: string };
 
-    if (!url || !secret) {
-      return c.json({ error: "url and secret are required" }, 400);
+    if (!url) {
+      return c.json({ error: "url is required" }, 400);
     }
 
     // Validate URL format
@@ -99,9 +139,31 @@ export function createCreatorRoutes(storage: Storage) {
       return c.json({ error: "Invalid URL format" }, 400);
     }
 
-    const webhook = storage.addWebhook(id, url, secret);
+    // Auto-generate a cryptographically secure webhook secret
+    const secret = `whsec_${crypto.randomBytes(32).toString("hex")}`;
 
-    return c.json({ webhookId: webhook.id }, 201);
+    const webhook = await storage.addWebhook(id, url, secret);
+
+    // Return the secret to the creator — they need it to verify signatures
+    return c.json({ webhookId: webhook.id, secret }, 201);
+  });
+
+  // DELETE /api/creators/:id/webhooks/:webhookId
+  app.delete("/:id/webhooks/:webhookId", async (c) => {
+    const creator = c.get("creator");
+    const id = c.req.param("id");
+    const webhookId = c.req.param("webhookId");
+
+    if (creator.id !== id) {
+      return c.json({ error: "Unauthorized" }, 403);
+    }
+
+    const deleted = await storage.deleteWebhook(webhookId);
+    if (!deleted) {
+      return c.json({ error: "Webhook not found" }, 404);
+    }
+
+    return c.json({ success: true });
   });
 
   return app;

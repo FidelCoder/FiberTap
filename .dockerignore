@@ -1,0 +1,15 @@
+node_modules
+dist
+.turbo
+.env
+.env.*
+*.log
+.git
+.gitignore
+.DS_Store
+*.md
+!README.md
+packages/docs
+packages/widget/dist
+tasks
+.vitepress

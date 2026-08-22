@@ -3,12 +3,27 @@ import { DEFAULT_WIDGET_CONFIG } from "@fibertap/core";
 
 // Parse data-* attributes from the script tag
 export function parseScriptAttributes(script: HTMLScriptElement): WidgetOptions {
+  // Parse preset amounts from comma-separated string (e.g., "1,5,10,25")
+  const presetRaw = script.getAttribute("data-preset");
+  let presetAmounts: number[] | undefined;
+  if (presetRaw) {
+    const parsed = presetRaw
+      .split(",")
+      .map((s) => parseFloat(s.trim()))
+      .filter((n) => !isNaN(n) && n > 0);
+    if (parsed.length > 0) {
+      presetAmounts = parsed;
+    }
+  }
+
   return {
     creator: script.getAttribute("data-creator") ?? "",
     theme: (script.getAttribute("data-theme") as WidgetOptions["theme"]) ?? DEFAULT_WIDGET_CONFIG.theme,
     position: (script.getAttribute("data-position") as WidgetOptions["position"]) ?? DEFAULT_WIDGET_CONFIG.position,
-    preset: script.getAttribute("data-preset") ?? undefined,
+    presetAmounts,
+    customLabel: script.getAttribute("data-label") ?? undefined,
     apiEndpoint: script.getAttribute("data-api") ?? "https://api.fibertap.dev",
+    defaultMode: (script.getAttribute("data-mode") as WidgetOptions["defaultMode"]) ?? undefined,
   };
 }
 

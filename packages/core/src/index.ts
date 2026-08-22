@@ -13,7 +13,7 @@ export type {
   Webhook,
 } from "./types.js";
 
-export { createFiberClient } from "./fiber.js";
+export { createFiberClient, decodeCKBAddress } from "./fiber.js";
 
 export {
   formatCKB,

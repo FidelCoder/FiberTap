@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alex Chen — Digital Artist & Designer</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #111;
+      background: #fff;
+    }
+    .hero {
+      background: linear-gradient(135deg, #0f0f23, #1a1a3e);
+      color: white;
+      padding: 80px 20px 60px;
+      text-align: center;
+    }
+    .avatar {
+      width: 100px; height: 100px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #ec4899);
+      margin: 0 auto 20px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 42px; font-weight: 800;
+    }
+    h1 { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+    .tagline { color: #a5b4fc; font-size: 16px; margin-bottom: 24px; }
+    .social-links { display: flex; gap: 16px; justify-content: center; }
+    .social-links a {
+      color: #c7d2fe; text-decoration: none; font-size: 14px;
+      padding: 6px 14px; border: 1px solid #3730a3; border-radius: 20px;
+      transition: all 0.2s;
+    }
+    .social-links a:hover { background: #3730a3; color: white; }
+
+    .works {
+      max-width: 900px; margin: 48px auto; padding: 0 20px;
+    }
+    .works h2 { font-size: 20px; font-weight: 700; margin-bottom: 24px; text-align: center; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      overflow: hidden;
+      transition: box-shadow 0.2s;
+    }
+    .card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+    .card-img {
+      height: 180px;
+      background: linear-gradient(135deg, #6366f1 0%, #ec4899 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 48px;
+    }
+    .card-body { padding: 16px; }
+    .card-body h3 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+    .card-body p { font-size: 13px; color: #6b7280; }
+
+    .about {
+      max-width: 600px; margin: 48px auto; padding: 0 20px;
+      text-align: center;
+    }
+    .about p { font-size: 15px; color: #4b5563; line-height: 1.7; }
+
+    .tip-section {
+      max-width: 500px; margin: 48px auto; padding: 32px;
+      background: #f9fafb; border-radius: 16px; text-align: center;
+    }
+    .tip-section h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .tip-section p { font-size: 14px; color: #6b7280; margin-bottom: 16px; }
+
+    footer { text-align: center; padding: 32px; color: #9ca3af; font-size: 13px; }
+  </style>
+</head>
+<body>
+
+  <div class="hero">
+    <div class="avatar">AC</div>
+    <h1>Alex Chen</h1>
+    <div class="tagline">Digital Artist & Designer · Building at the intersection of art and crypto</div>
+    <div class="social-links">
+      <a href="#">Twitter</a>
+      <a href="#">GitHub</a>
+      <a href="#">Dribbble</a>
+    </div>
+  </div>
+
+  <div class="works">
+    <h2>Selected Works</h2>
+    <div class="grid">
+      <div class="card">
+        <div class="card-img">🎨</div>
+        <div class="card-body">
+          <h3>Generative Art Series</h3>
+          <p>Algorithmically generated landscapes using WebGL shaders</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-img" style="background: linear-gradient(135deg, #059669, #3b82f6);">🌊</div>
+        <div class="card-body">
+          <h3>Ocean Protocol UI</h3>
+          <p>Design system and component library for DeFi dashboards</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-img" style="background: linear-gradient(135deg, #f59e0b, #ef4444);">✨</div>
+        <div class="card-body">
+          <h3>NFT Collection</h3>
+          <p>1/1 hand-drawn NFTs exploring digital identity</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="about">
+    <h2 style="font-size:20px; font-weight:700; margin-bottom:12px;">About</h2>
+    <p>I'm a designer and creative coder based in San Francisco. I create digital art, build open-source tools, and explore the frontier of decentralized creativity. If you enjoy my work, consider sending a tip — it keeps me building.</p>
+  </div>
+
+  <div class="tip-section">
+    <h3>☕ Support My Work</h3>
+    <p>Click the tip button in the bottom-right corner to send CKB directly from your wallet.</p>
+  </div>
+
+  <footer>
+    © 2026 Alex Chen · Made with 💜 and FiberTap
+  </footer>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       FIBERTAP WIDGET — Creator portfolio config
+       Dark theme, bottom-right, QR-first for crypto-native audience
+       ═══════════════════════════════════════════════════════════════ -->
+  <script
+    src="../dist/widget.min.js"
+    data-creator="ckt1qyqvsv5240xeh85wvnau2eky8pwrhh4jr8ts8vyj3c"
+    data-theme="dark"
+    data-position="bottom-right"
+    data-preset="5,10,25,50"
+    data-label="Support"
+    data-mode="qr"
+    data-api="http://localhost:3001"
+  ></script>
+
+</body>
+</html>
