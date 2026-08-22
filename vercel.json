@@ -1,8 +1,6 @@
 {
-  "installCommand": "pnpm install",
-  "buildCommand": "pnpm --filter @fibertap/core build && pnpm --filter @fibertap/widget build && mkdir -p packages/api/public && cp packages/widget/dist/widget.min.js packages/api/public/",
   "outputDirectory": ".",
   "routes": [
-    { "src": "/(.*)", "dest": "/api/index.ts" }
+    { "src": "/(.*)", "dest": "/api/index.js" }
   ]
 }

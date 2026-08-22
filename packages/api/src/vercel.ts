@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
+import { handle } from "hono/vercel";
 import { loadConfig } from "./config.js";
 import { createMongoStorage, createMemoryStorage, type Storage } from "./services/storage.js";
 import { createAuthMiddleware } from "./middleware/auth.js";
@@ -10,14 +11,12 @@ import { createPaymentRoutes } from "./routes/payments.js";
 import { LANDING_PAGE } from "./landing.js";
 import { DOCS_PAGE } from "./docs.js";
 import { readFileSync, existsSync } from "fs";
-import { resolve, dirname } from "path";
-import { fileURLToPath } from "url";
-import type { Context, Next } from "hono";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
+import { resolve } from "path";
 
 const config = loadConfig();
-const useMongo = (process.env.NODE_ENV === "production" || process.env.USE_MONGO === "true") && !!process.env.MONGODB_URI;
+const useMongo =
+  (process.env.NODE_ENV === "production" || process.env.USE_MONGO === "true") &&
+  !!process.env.MONGODB_URI;
 const storage: Storage = useMongo
   ? createMongoStorage(config.mongoUri, config.mongoDb)
   : createMemoryStorage();
@@ -56,23 +55,25 @@ app.get("/health", (c) =>
 // Landing page
 app.get("/", (c) => c.html(LANDING_PAGE));
 
-// Serve widget JS
+// Serve widget JS — try to read from disk (works locally), fall back to CDN
 let widgetJs = "";
-const widgetPaths = [
-  resolve(__dirname, "../public/widget.min.js"),
-  resolve(__dirname, "../../widget/dist/widget.min.js"),
-  resolve(__dirname, "../../../widget/dist/widget.min.js"),
-];
-for (const p of widgetPaths) {
-  if (existsSync(p)) {
-    widgetJs = readFileSync(p, "utf-8");
-    break;
+try {
+  // At bundle time, this path will be resolved relative to the package
+  const widgetPath = resolve(
+    process.cwd(),
+    "packages/widget/dist/widget.min.js"
+  );
+  if (existsSync(widgetPath)) {
+    widgetJs = readFileSync(widgetPath, "utf-8");
   }
+} catch {
+  // Ignore — widget might not be available
 }
 
 app.get("/widget.min.js", (c) => {
   if (!widgetJs) {
-    return c.json({ error: "Widget not built" }, 404);
+    // Redirect to CDN if widget not available locally
+    return c.redirect("https://cdn.fibertap.dev/widget.min.js", 302);
   }
   return new Response(widgetJs, {
     headers: {
@@ -90,4 +91,4 @@ app.get("/docs/*", (c) => c.html(DOCS_PAGE));
 app.notFound((c) => c.json({ error: "Not found" }, 404));
 
 // Vercel serverless handler
-export default app;
+export default handle(app);

@@ -4,7 +4,7 @@
   "type": "module",
   "main": "./dist/index.js",
   "scripts": {
-    "build": "tsup src/index.ts --format esm",
+    "build": "tsup src/index.ts src/vercel.ts --format esm",
     "dev": "tsx watch src/index.ts",
     "lint": "tsc --noEmit",
     "test": "vitest run"
