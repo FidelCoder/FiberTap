@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -477,4 +476,126 @@
 });
 
 <span class="cmt">// 2. Register webhook to receive payment events</span>
-<span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">\
+<span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">\`https://api.fibertap.dev/api/creators/\${id}/webhooks\`</span>, {
+  method: <span class="str">"POST"</span>,
+  headers: {
+    <span class="str">"Content-Type"</span>: <span class="str">"application/json"</span>,
+    <span class="str">"x-api-key"</span>: apiKey,
+  },
+  body: JSON.<span class="fn">stringify</span>({ url: <span class="str">"https://your-server.com/webhook"</span> }),
+});</code></pre>
+      </div>
+
+      <!-- Advanced -->
+      <h2 id="webhooks">Webhooks</h2>
+      <p>Get notified when payments are confirmed. Register a webhook URL and receive POST requests with HMAC-SHA256 signatures.</p>
+
+      <h3>Event Payload</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code>{
+  <span class="str">"type"</span>: <span class="str">"payment.confirmed"</span>,
+  <span class="str">"paymentId"</span>: <span class="str">"ft_pay_xyz"</span>,
+  <span class="str">"amount"</span>: <span class="str">"100000000"</span>,
+  <span class="str">"senderAddress"</span>: <span class="str">"ckt1q..."</span>,
+  <span class="str">"txHash"</span>: <span class="str">"0xabc..."</span>,
+  <span class="str">"confirmedAt"</span>: 1700000000000,
+  <span class="str">"message"</span>: <span class="str">"Great article!"</span>
+}</code></pre>
+      </div>
+
+      <h3>Verify Signatures</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><code><span class="kw">import</span> crypto <span class="kw">from</span> <span class="str">"crypto"</span>;
+
+<span class="kw">function</span> <span class="fn">verifyWebhook</span>(payload, signature, secret) {
+  <span class="kw">const</span> expected = crypto
+    .<span class="fn">createHmac</span>(<span class="str">"sha256"</span>, secret)
+    .<span class="fn">update</span>(payload)
+    .<span class="fn">digest</span>(<span class="str">"hex"</span>);
+
+  <span class="kw">return</span> crypto.<span class="fn">timingSafeEqual</span>(
+    Buffer.<span class="fn">from</span>(signature),
+    Buffer.<span class="fn">from</span>(expected)
+  );
+}</code></pre>
+      </div>
+
+      <h2 id="api-ref">API Reference</h2>
+      <p>Base URL: <code>https://api.fibertap.dev</code></p>
+
+      <h3>Endpoints</h3>
+      <table>
+        <thead>
+          <tr><th>Method</th><th>Endpoint</th><th>Auth</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>POST</code></td><td><code>/api/creators/register</code></td><td>Public</td><td>Register a new creator</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/creators/:id</code></td><td>Public</td><td>Get creator profile</td></tr>
+          <tr><td><code>PATCH</code></td><td><code>/api/creators/:id/config</code></td><td>API key</td><td>Update widget config</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/creators/:id/webhooks</code></td><td>API key</td><td>Register webhook</td></tr>
+          <tr><td><code>DELETE</code></td><td><code>/api/creators/:id/webhooks/:whId</code></td><td>API key</td><td>Delete webhook</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/payments/request</code></td><td>Public</td><td>Create payment request</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/payments/:id/confirm</code></td><td>Public</td><td>Confirm payment</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/payments/:id/status</code></td><td>Public</td><td>Check payment status</td></tr>
+          <tr><td><code>GET</code></td><td><code>/health</code></td><td>Public</td><td>Health check</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="troubleshooting">Troubleshooting</h2>
+
+      <h3>Widget doesn't appear</h3>
+      <ul>
+        <li>Check that the <code>data-creator</code> address is valid (starts with <code>ckb1q</code> or <code>ckt1q</code>)</li>
+        <li>Open browser DevTools and check the console for errors</li>
+        <li>Make sure the script URL is correct</li>
+      </ul>
+
+      <h3>Button appears but clicking does nothing</h3>
+      <ul>
+        <li>Verify your API server is running and reachable</li>
+        <li>Check the <code>data-api</code> attribute points to a valid API URL</li>
+        <li>Open DevTools Network tab to see if API calls are succeeding</li>
+      </ul>
+
+      <h3>Styling conflicts</h3>
+      <p>The widget uses Shadow DOM isolation. If you see styling issues, it's likely a z-index conflict. The widget renders at <code>z-index: 2147483647</code> (max safe value).</p>
+
+      <div class="info-box note">
+        ℹ️ <strong>Browser Support:</strong> Chrome 90+, Firefox 90+, Safari 15+, Edge 90+. The widget requires Shadow DOM support.
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    function copyCode(btn) {
+      const pre = btn.parentElement.querySelector('pre');
+      const text = pre.textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+
+    // Active sidebar link on scroll
+    const sections = document.querySelectorAll('[id]');
+    const links = document.querySelectorAll('.sidebar a');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          links.forEach(l => l.classList.remove('active'));
+          const active = document.querySelector(\`.sidebar a[href="#\${entry.target.id}"]\`);
+          if (active) active.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-20% 0px -70% 0px' });
+    sections.forEach(s => observer.observe(s));
+  </script>
+</body>
+</html>`;
